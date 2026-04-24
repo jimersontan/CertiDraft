@@ -1,7 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  hasSupabaseServerEnv,
+  SUPABASE_CONFIG_ERROR,
+} from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 
 export default async function TestPage() {
+  if (!hasSupabaseServerEnv()) {
+    return (
+      <div style={{ padding: "2rem", fontFamily: "system-ui" }}>
+        <h1 className="mb-4 text-3xl font-bold">Supabase & Shadcn Test</h1>
+        <div>
+          <p style={{ color: "red", fontSize: "1.25rem" }}>
+            ❌ Supabase not configured
+          </p>
+          <pre
+            style={{ background: "#f5f5f5", padding: "1rem", borderRadius: "8px" }}
+          >
+            {SUPABASE_CONFIG_ERROR}
+          </pre>
+        </div>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
 
   // Try a simple query to verify the connection

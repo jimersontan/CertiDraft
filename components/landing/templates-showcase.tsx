@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const templates = [
   {
@@ -107,8 +108,8 @@ function CertificateCard({
                 {template.name} Template
               </h4>
             </div>
-            <Button variant="outline" size="sm">
-              Preview
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/templates">Preview</Link>
             </Button>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">

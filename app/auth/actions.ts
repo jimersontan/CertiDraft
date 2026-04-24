@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  hasSupabaseServerEnv,
+  SUPABASE_CONFIG_ERROR,
+} from "@/lib/supabase/server";
 
 export async function signUp(formData: FormData) {
-  const supabase = await createClient();
-
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
@@ -24,6 +26,12 @@ export async function signUp(formData: FormData) {
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };
   }
+
+  if (!hasSupabaseServerEnv()) {
+    return { error: SUPABASE_CONFIG_ERROR };
+  }
+
+  const supabase = await createClient();
 
   // Sign up with Supabase Auth
   const { data, error } = await supabase.auth.signUp({
@@ -60,14 +68,18 @@ export async function signUp(formData: FormData) {
 }
 
 export async function signIn(formData: FormData) {
-  const supabase = await createClient();
-
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
   }
+
+  if (!hasSupabaseServerEnv()) {
+    return { error: SUPABASE_CONFIG_ERROR };
+  }
+
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -83,13 +95,17 @@ export async function signIn(formData: FormData) {
 }
 
 export async function resetPassword(formData: FormData) {
-  const supabase = await createClient();
-
   const email = formData.get("email") as string;
 
   if (!email) {
     return { error: "Email is required." };
   }
+
+  if (!hasSupabaseServerEnv()) {
+    return { error: SUPABASE_CONFIG_ERROR };
+  }
+
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? "" : ""}${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/auth/update-password`,
@@ -103,6 +119,10 @@ export async function resetPassword(formData: FormData) {
 }
 
 export async function signOut() {
+  if (!hasSupabaseServerEnv()) {
+    redirect("/auth/login");
+  }
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");

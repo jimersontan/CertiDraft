@@ -2,25 +2,51 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { signIn } from "@/app/auth/actions";
+import { loginSchema, type LoginFormData } from "@/lib/schemas";
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
-    setError(null);
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isValid, touchedFields },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: "onTouched",
+  });
+
+  async function onSubmit(data: LoginFormData) {
+    setServerError(null);
     setLoading(true);
 
-    const result = await signIn(formData);
+    const formData = new FormData();
+    formData.set("email", data.email);
+    formData.set("password", data.password);
+    if (data.remember) formData.set("remember", "on");
 
-    // If signIn succeeds it redirects, so we only reach here on error
+    const result = await signIn(formData);
     if (result?.error) {
-      setError(result.error);
+      setServerError(result.error);
       setLoading(false);
     }
   }
@@ -30,10 +56,7 @@ export default function LoginPage() {
       {/* Header */}
       <div className="space-y-2">
         {/* Mobile logo */}
-        <Link
-          href="/"
-          className="mb-6 flex items-center gap-2 lg:hidden"
-        >
+        <Link href="/" className="mb-6 flex items-center gap-2 lg:hidden">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <svg
               width="16"
@@ -64,39 +87,36 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Error alert */}
-      {error && (
+      {/* Server error */}
+      {serverError && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 8v4M12 16h.01" />
-          </svg>
-          {error}
+          <AlertCircle className="size-4 flex-shrink-0" />
+          {serverError}
         </div>
       )}
 
       {/* Form */}
-      <form action={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Email */}
         <div className="space-y-2">
           <Label htmlFor="email">Email address</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            required
-            autoComplete="email"
-            autoFocus
-          />
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              autoFocus
+              className={errors.email ? "border-destructive" : touchedFields.email && !errors.email ? "border-emerald-500" : ""}
+              {...register("email")}
+            />
+            {touchedFields.email && !errors.email && (
+              <CheckCircle2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-emerald-500" />
+            )}
+          </div>
+          {errors.email && (
+            <p className="text-xs text-destructive">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -104,25 +124,53 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
             <Link
-              href="/auth/reset-password"
+              href="/auth/forgot-password"
               className="text-xs font-medium text-primary hover:underline"
             >
               Forgot password?
             </Link>
           </div>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            required
-            autoComplete="current-password"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-xs text-destructive">{errors.password.message}</p>
+          )}
         </div>
 
         {/* Remember me */}
         <div className="flex items-center gap-2">
-          <Checkbox id="remember" name="remember" />
+          <Controller
+            name="remember"
+            control={control}
+            render={({ field }) => (
+              <Checkbox 
+                id="remember" 
+                checked={field.value} 
+                onCheckedChange={field.onChange} 
+              />
+            )}
+          />
           <Label
             htmlFor="remember"
             className="text-sm font-normal text-muted-foreground"
@@ -139,24 +187,9 @@ export default function LoginPage() {
         >
           {loading ? (
             <span className="flex items-center gap-2">
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               Signing in...
             </span>
@@ -182,6 +215,59 @@ export default function LoginPage() {
       <Button variant="outline" className="h-11 w-full" asChild>
         <Link href="/auth/signup">Create a free account</Link>
       </Button>
+
+      {/* Admin Login Modal */}
+      <div className="mt-8 text-center">
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <ShieldCheck className="size-3.5" />
+              Admin Portal
+            </button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
+                <ShieldCheck className="size-6 text-indigo-600" />
+              </div>
+              <DialogTitle className="text-center text-xl">Admin Access</DialogTitle>
+              <DialogDescription className="text-center">
+                Sign in with your administrator credentials to access the control panel.
+              </DialogDescription>
+            </DialogHeader>
+            <form action={async (formData) => {
+              formData.set("isAdminLogin", "true");
+              const res = await signIn(formData);
+              if (res?.error) setServerError(res.error);
+            }} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-email">Admin Email</Label>
+                <Input
+                  id="admin-email"
+                  name="email"
+                  type="email"
+                  placeholder="admin@certidraft.com"
+                  defaultValue="admin@certidraft.com"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">Admin Password</Label>
+                <Input
+                  id="admin-password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
+                Authenticate
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

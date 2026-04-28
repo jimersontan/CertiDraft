@@ -1,230 +1,178 @@
-import Link from "next/link";
-import { CheckCircle2, ExternalLink, Mail, Share2 } from "lucide-react";
-
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+  CheckCircle,
+  XCircle,
+  Calendar,
+  Building2,
+  Share2,
+  ArrowLeft,
+} from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCertificateVerificationRecord } from "@/lib/certificates/verification";
+import {
+  createClient,
+  hasSupabaseServerEnv,
+} from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
-type VerificationPageProps = {
-  params: Promise<{ token: string }>;
+export const metadata = {
+  title: "Certificate Verification — CertiDraft AI",
+  description: "Verify the authenticity of a CertiDraft certificate.",
 };
 
-export default async function VerificationPage({
-  params,
-}: VerificationPageProps) {
+interface VerifyPageProps {
+  params: Promise<{ token: string }>;
+}
+
+export default async function VerifyPage({ params }: VerifyPageProps) {
   const { token } = await params;
 
-  let verificationRecord = null;
-  let errorMessage = "";
+  let certificate: Record<string, unknown> | null = null;
 
-  try {
-    verificationRecord = await getCertificateVerificationRecord(token);
-  } catch (error) {
-    errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Unable to verify this certificate right now.";
+  if (hasSupabaseServerEnv()) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("certificates")
+      .select("*")
+      .eq("verification_token", token)
+      .maybeSingle();
+    certificate = data as Record<string, unknown> | null;
   }
 
-  const shareUrl = buildVerificationUrl(token);
-  const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-    shareUrl
-  )}`;
-  const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-    shareUrl
-  )}&text=${encodeURIComponent("Verified certificate from CertiDraft")}`;
-  const emailShareUrl = `mailto:?subject=${encodeURIComponent(
-    "Verified certificate"
-  )}&body=${encodeURIComponent(`View this verified certificate: ${shareUrl}`)}`;
-
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.10),_transparent_35%),linear-gradient(to_bottom,_rgba(15,23,42,0.02),_transparent_30%)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-700">
-              <Share2 className="size-4" />
-              Public certificate verification
-            </div>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-foreground">
-              Certificate Verification
-            </h1>
-            <p className="mt-2 max-w-2xl text-base leading-7 text-muted-foreground">
-              Scan the QR code or open a shared link to confirm that a
-              certificate was issued through CertiDraft.
-            </p>
+  if (!certificate) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-lg text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+            <XCircle className="size-10 text-red-600" />
           </div>
-
-          <Button variant="outline" asChild>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Certificate Not Found
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            This verification link is invalid or the certificate has been
+            removed.
+          </p>
+          <Button className="mt-6" asChild>
             <Link href="/">
+              <ArrowLeft className="size-4" />
               Back to Home
-              <ExternalLink className="size-4" />
             </Link>
           </Button>
         </div>
-
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertTitle>Verification unavailable</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {!errorMessage && !verificationRecord ? (
-          <Card className="border-destructive/20 bg-card/95">
-            <CardHeader>
-              <CardTitle>Certificate not found</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                We could not find a certificate that matches this verification
-                token.
-              </p>
-              <p>
-                Please check the QR code or ask the issuer to share a valid
-                verification link.
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {verificationRecord ? (
-          <div className="grid gap-6 lg:grid-cols-[1.6fr_0.9fr]">
-            <Card className="border-emerald-500/15 bg-card/95 shadow-sm">
-              <CardHeader className="gap-4 border-b border-border/60 pb-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Verification status
-                    </p>
-                    <CardTitle className="mt-1 text-3xl">
-                      {verificationRecord.recipientName}
-                    </CardTitle>
-                  </div>
-
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-base font-semibold text-emerald-700">
-                    <CheckCircle2 className="size-5" />
-                    {verificationRecord.statusLabel} ✓
-                  </div>
-                </div>
-
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-                  {verificationRecord.message}
-                </p>
-              </CardHeader>
-
-              <CardContent className="grid gap-4 py-6 sm:grid-cols-2">
-                <DetailCard
-                  label="Recipient name"
-                  value={verificationRecord.recipientName}
-                />
-                <DetailCard
-                  label="Achievement"
-                  value={verificationRecord.achievement}
-                />
-                <DetailCard
-                  label="Issue date"
-                  value={formatDateTime(verificationRecord.issueDate, false)}
-                />
-                <DetailCard
-                  label="Issuing organization"
-                  value={verificationRecord.organizationName}
-                />
-                <DetailCard
-                  label="Verification timestamp"
-                  value={formatDateTime(
-                    verificationRecord.verificationTimestamp,
-                    true
-                  )}
-                />
-                <DetailCard label="Verification token" value={verificationRecord.token} />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/95">
-              <CardHeader>
-                <CardTitle className="text-xl">Share</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full justify-start" asChild>
-                  <a
-                    href={linkedInShareUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    LinkedIn
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <a
-                    href={twitterShareUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Twitter
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <a href={emailShareUrl}>
-                    Email
-                    <Mail className="size-4" />
-                  </a>
-                </Button>
-                <Button className="w-full justify-start" variant="ghost" asChild>
-                  <a href={shareUrl}>
-                    Open verification link
-                    <ExternalLink className="size-4" />
-                  </a>
-                </Button>
-                <p className="pt-2 text-xs leading-6 text-muted-foreground">
-                  Share this verification link with employers, institutions, or
-                  event organizers who need to confirm authenticity.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        ) : null}
       </div>
-    </main>
-  );
-}
-
-function DetailCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-2 text-base font-semibold leading-7 text-foreground">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function formatDateTime(value: string, includeTime: boolean) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
+    );
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    ...(includeTime ? { timeStyle: "short" as const } : {}),
-  }).format(parsed);
-}
+  const recipientName = String(certificate.recipient_name || "Recipient");
+  const achievement = String(
+    certificate.achievement || certificate.citation || "Achievement"
+  );
+  const issueDate = certificate.issued_at
+    ? new Date(String(certificate.issued_at)).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "N/A";
+  const organization = String(
+    certificate.organization || "CertiDraft"
+  );
 
-function buildVerificationUrl(token: string) {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://certidraft.com";
-  return `${siteUrl.replace(/\/+$/, "")}/verify/${encodeURIComponent(token)}`;
+  return (
+    <div className="min-h-screen bg-gray-50 px-4 py-8">
+      {/* Back button */}
+      <div className="mx-auto max-w-4xl">
+        <Button variant="ghost" size="sm" className="mb-4 gap-1.5 text-gray-500" asChild>
+          <Link href="/">
+            <ArrowLeft className="size-4" />
+            Back
+          </Link>
+        </Button>
+      </div>
+
+      {/* Certificate card */}
+      <div className="mx-auto max-w-4xl">
+        <div className="relative overflow-hidden rounded-2xl border bg-white shadow-xl">
+          {/* Verified badge */}
+          <div className="absolute right-6 top-6 z-10 flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+            <CheckCircle className="size-4" />
+            Verified
+          </div>
+
+          {/* Certificate content — A4-like aspect ratio */}
+          <div className="flex aspect-[210/160] flex-col items-center justify-center p-8 sm:p-12 md:p-16">
+            {/* Decorative border */}
+            <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 p-8">
+              {/* Organization */}
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-gray-400">
+                {organization}
+              </p>
+
+              {/* Title */}
+              <h2 className="mt-4 text-center text-lg font-semibold uppercase tracking-widest text-gray-500">
+                Certificate of Achievement
+              </h2>
+
+              {/* Divider */}
+              <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-blue-400 to-transparent" />
+
+              {/* Presented to */}
+              <p className="mt-6 text-sm text-gray-500">
+                This is proudly presented to
+              </p>
+
+              {/* Recipient */}
+              <h1 className="mt-3 text-center text-3xl font-bold text-gray-900 sm:text-4xl">
+                {recipientName}
+              </h1>
+
+              {/* Achievement */}
+              <p className="mt-4 max-w-lg text-center text-sm leading-relaxed text-gray-600 italic">
+                {achievement}
+              </p>
+
+              {/* Date */}
+              <div className="mt-8 flex items-center gap-2 text-sm text-gray-400">
+                <Calendar className="size-4" />
+                {issueDate}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Verification info */}
+        <div className="mt-6 rounded-xl border bg-white p-6 text-center shadow-sm">
+          <div className="flex items-center justify-center gap-2 text-emerald-700">
+            <CheckCircle className="size-5" />
+            <span className="font-semibold">
+              This certificate is authentic and verified
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Verified by CertiDraft AI on{" "}
+            {new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+
+          {/* Share buttons */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Share2 className="size-3.5" />
+              Share on LinkedIn
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Share2 className="size-3.5" />
+              Share on Twitter
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Share2 className="size-3.5" />
+              Share via Email
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -1,47 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signUp } from "@/app/auth/actions";
+import { signupSchema, type SignupFormData, getPasswordStrength } from "@/lib/schemas";
 
 export default function SignUpPage() {
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
-    setError(null);
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors, touchedFields },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: "onTouched",
+  });
 
-    // Client-side validation
-    const password = formData.get("password") as string;
-    const confirmPassword = formData.get("confirmPassword") as string;
-    const terms = formData.get("terms");
+  const password = watch("password") || "";
+  const confirmPassword = watch("confirmPassword") || "";
+  const strength = useMemo(() => getPasswordStrength(password), [password]);
+  const passwordsMatch =
+    confirmPassword.length > 0 && password === confirmPassword;
 
-    if (!terms) {
-      setError("You must agree to the Terms of Service and Privacy Policy.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
+  async function onSubmit(data: SignupFormData) {
+    setServerError(null);
     setLoading(true);
 
-    const result = await signUp(formData);
+    const formData = new FormData();
+    formData.set("fullName", data.fullName);
+    formData.set("email", data.email);
+    formData.set("password", data.password);
+    formData.set("confirmPassword", data.confirmPassword);
 
-    // If signUp succeeds it redirects, so we only reach here on error
+    const result = await signUp(formData);
     if (result?.error) {
-      setError(result.error);
+      setServerError(result.error);
       setLoading(false);
     }
   }
@@ -50,11 +58,7 @@ export default function SignUpPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="space-y-2">
-        {/* Mobile logo */}
-        <Link
-          href="/"
-          className="mb-6 flex items-center gap-2 lg:hidden"
-        >
+        <Link href="/" className="mb-6 flex items-center gap-2 lg:hidden">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <svg
               width="16"
@@ -85,107 +89,185 @@ export default function SignUpPage() {
         </p>
       </div>
 
-      {/* Error alert */}
-      {error && (
+      {/* Server error */}
+      {serverError && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 8v4M12 16h.01" />
-          </svg>
-          {error}
+          <AlertCircle className="size-4 flex-shrink-0" />
+          {serverError}
         </div>
       )}
 
       {/* Form */}
-      <form action={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Full name */}
         <div className="space-y-2">
           <Label htmlFor="fullName">Full name</Label>
-          <Input
-            id="fullName"
-            name="fullName"
-            type="text"
-            placeholder="Jane Doe"
-            required
-            autoComplete="name"
-            autoFocus
-          />
+          <div className="relative">
+            <Input
+              id="fullName"
+              type="text"
+              placeholder="Jane Doe"
+              autoComplete="name"
+              autoFocus
+              className={errors.fullName ? "border-destructive" : touchedFields.fullName && !errors.fullName ? "border-emerald-500" : ""}
+              {...register("fullName")}
+            />
+            {touchedFields.fullName && !errors.fullName && (
+              <CheckCircle2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-emerald-500" />
+            )}
+          </div>
+          {errors.fullName && (
+            <p className="text-xs text-destructive">{errors.fullName.message}</p>
+          )}
         </div>
 
         {/* Email */}
         <div className="space-y-2">
           <Label htmlFor="email">Email address</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            required
-            autoComplete="email"
-          />
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              className={errors.email ? "border-destructive" : touchedFields.email && !errors.email ? "border-emerald-500" : ""}
+              {...register("email")}
+            />
+            {touchedFields.email && !errors.email && (
+              <CheckCircle2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-emerald-500" />
+            )}
+          </div>
+          {errors.email && (
+            <p className="text-xs text-destructive">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            required
-            autoComplete="new-password"
-            minLength={6}
-          />
-          <p className="text-xs text-muted-foreground">
-            Must be at least 6 characters
-          </p>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          {/* Strength indicator */}
+          {password.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex h-1.5 gap-1">
+                {[1, 2, 3].map((level) => (
+                  <div
+                    key={level}
+                    className={`h-full flex-1 rounded-full transition-colors ${
+                      strength.score >= level ? strength.color : "bg-gray-200"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p
+                className={`text-xs font-medium ${
+                  strength.score <= 1
+                    ? "text-red-600"
+                    : strength.score === 2
+                      ? "text-amber-600"
+                      : "text-emerald-600"
+                }`}
+              >
+                {strength.label}
+              </p>
+            </div>
+          )}
+          {errors.password && (
+            <p className="text-xs text-destructive">{errors.password.message}</p>
+          )}
         </div>
 
         {/* Confirm password */}
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm password</Label>
-          <Input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            required
-            autoComplete="new-password"
-          />
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className={`pr-10 ${
+                errors.confirmPassword
+                  ? "border-destructive"
+                  : passwordsMatch
+                    ? "border-emerald-500"
+                    : ""
+              }`}
+              {...register("confirmPassword")}
+            />
+            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              {passwordsMatch && (
+                <CheckCircle2 className="size-4 text-emerald-500" />
+              )}
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
+          </div>
+          {errors.confirmPassword && (
+            <p className="text-xs text-destructive">
+              {errors.confirmPassword.message}
+            </p>
+          )}
         </div>
 
         {/* Terms */}
         <div className="flex items-start gap-2">
-          <Checkbox id="terms" name="terms" value="on" className="mt-0.5" />
+          <Controller
+            name="terms"
+            control={control}
+            render={({ field }) => (
+              <Checkbox 
+                id="terms" 
+                className="mt-0.5" 
+                checked={field.value} 
+                onCheckedChange={field.onChange} 
+              />
+            )}
+          />
           <Label
             htmlFor="terms"
             className="text-sm font-normal leading-relaxed text-muted-foreground"
           >
             I agree to the{" "}
-            <Link
-              href="#"
-              className="font-medium text-primary hover:underline"
-            >
+            <Link href="#" className="font-medium text-primary hover:underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link
-              href="#"
-              className="font-medium text-primary hover:underline"
-            >
+            <Link href="#" className="font-medium text-primary hover:underline">
               Privacy Policy
             </Link>
           </Label>
         </div>
+        {errors.terms && (
+          <p className="text-xs text-destructive">{errors.terms.message}</p>
+        )}
 
         {/* Submit */}
         <Button
@@ -195,24 +277,9 @@ export default function SignUpPage() {
         >
           {loading ? (
             <span className="flex items-center gap-2">
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               Creating account...
             </span>

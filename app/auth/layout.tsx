@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users, FileText, Activity } from "lucide-react";
 
 export default function AuthLayout({
   children,
@@ -75,21 +76,27 @@ export default function AuthLayout({
         {/* Bottom stats */}
         <div className="flex gap-8">
           {[
-            { value: "2,000+", label: "Active Users" },
-            { value: "50K+", label: "Certificates" },
-            { value: "99.9%", label: "Uptime" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              <p className="text-xs text-white/60">{stat.label}</p>
-            </div>
-          ))}
+            { value: "2,000+", label: "Active Users", icon: Users },
+            { value: "50K+", label: "Certificates", icon: FileText },
+            { value: "99.9%", label: "Uptime", icon: Activity },
+          ].map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label}>
+                <div className="flex items-center gap-1.5">
+                  <Icon className="h-4 w-4 text-white/80" />
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
+                </div>
+                <p className="text-xs text-white/60">{stat.label}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Right form panel */}
-      <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
-        <div className="mx-auto w-full max-w-md">{children}</div>
+      <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2 lg:px-16 lg:py-0">
+        <div className="w-full max-w-md">{children}</div>
       </div>
     </div>
   );

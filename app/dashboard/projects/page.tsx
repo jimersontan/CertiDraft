@@ -168,55 +168,71 @@ function ProjectsContent() {
         </Button>
       </PageHeader>
 
-      {/* Pro Features Banner */}
-      <div className={`relative overflow-hidden rounded-2xl border shadow-sm transition-all ${
-        isPro 
-          ? "border-blue-200/60 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80" 
-          : "border-border/50 bg-muted/30"
+      {/* Pro Features Banner — Glassmorphism */}
+      <div className={`relative overflow-hidden rounded-2xl border shadow-md transition-all ${
+        isPro
+          ? "border-indigo-200/60 bg-gradient-to-r from-indigo-50 via-blue-50/60 to-violet-50"
+          : "border-white/30 bg-gradient-to-br from-slate-900/80 via-indigo-950/90 to-slate-900/80 backdrop-blur-sm"
       }`}>
-        <div className="px-5 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+        {/* Decorative glow */}
+        {!isPro && (
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
+        )}
+        <div className="relative px-5 py-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
               {isPro ? (
-                <div className="flex items-center gap-2 rounded-full bg-blue-600 px-2.5 py-1 shadow-sm">
+                <div className="flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 shadow-sm">
                   <Crown className="size-3 text-white" />
-                  <span className="text-[9px] font-black text-white uppercase tracking-widest">Pro Active</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white">Pro Active</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-full bg-muted px-2.5 py-1">
-                  <Lock className="size-3 text-muted-foreground" />
-                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Free Plan</span>
-                </div>
+                <>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20">
+                    <Crown className="size-4 text-amber-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Unlock Premium Features</p>
+                    <p className="text-[11px] text-slate-400">Upgrade your plan to access all tools</p>
+                  </div>
+                </>
               )}
             </div>
             {!isPro && (
-              <Button size="sm" variant="default" className="h-7 rounded-lg px-3 text-[10px] font-black uppercase tracking-widest gap-1.5" asChild>
-                <Link href="/dashboard/subscription">
-                  <Crown className="size-3" /> Upgrade
-                </Link>
-              </Button>
+              <Link
+                href="/dashboard/subscription"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-indigo-500/40"
+              >
+                <Crown className="size-4" />
+                Upgrade to Pro
+              </Link>
             )}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {proFeatures.map((f) => {
               const Icon = f.icon;
               return (
-                <div 
-                  key={f.label} 
-                  className={`flex items-start gap-2.5 rounded-xl border p-3 transition-all ${
-                    f.active 
-                      ? "border-blue-200/50 bg-white/70 shadow-sm" 
-                      : "border-border/30 bg-muted/20 opacity-60"
+                <div
+                  key={f.label}
+                  className={`flex items-start gap-3 rounded-xl border p-3 transition-all ${
+                    f.active
+                      ? "border-indigo-200/60 bg-white/70 shadow-sm backdrop-blur-sm"
+                      : "border-white/10 bg-white/5 backdrop-blur-sm"
                   }`}
                 >
                   <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                    f.active ? "bg-blue-100 text-blue-600" : "bg-muted text-muted-foreground"
+                    f.active ? "bg-indigo-100 text-indigo-600" : "bg-white/10 text-slate-400"
                   }`}>
                     {f.active ? <Icon className="size-4" /> : <Lock className="size-3.5" />}
                   </div>
                   <div className="min-w-0">
-                    <p className={`text-xs font-bold truncate ${f.active ? "text-foreground" : "text-muted-foreground"}`}>{f.label}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{f.desc}</p>
+                    <p className={`truncate text-xs font-bold ${
+                      f.active ? "text-slate-800" : "text-slate-400"
+                    }`}>{f.label}</p>
+                    <p className={`truncate text-[10px] ${
+                      f.active ? "text-muted-foreground" : "text-slate-600"
+                    }`}>{f.desc}</p>
                   </div>
                 </div>
               );
@@ -228,16 +244,24 @@ function ProjectsContent() {
       {/* Search + Filter */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Search projects..."
-            className="pl-9"
+            className="h-10 rounded-xl border-border/60 bg-white pl-9 shadow-inner shadow-slate-100 placeholder:text-slate-400 focus-visible:border-indigo-400 focus-visible:ring-indigo-400/20 dark:bg-input/30"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="h-10 w-full rounded-xl border-border/60 bg-white shadow-inner shadow-slate-100 sm:w-[180px] dark:bg-input/30">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -313,21 +337,26 @@ function ProjectsContent() {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 px-6 py-14 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-            <FolderKanban className="size-7 text-primary" />
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/80 bg-gradient-to-b from-slate-50/60 to-white px-6 py-20 text-center">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 ring-8 ring-blue-50/50">
+            <FolderKanban className="size-8 text-blue-500" />
           </div>
-          <h3 className="text-lg font-semibold">No projects found</h3>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <h3 className="text-xl font-semibold text-slate-900">
+            {search || filter !== "all" ? "No matching projects" : "No projects yet"}
+          </h3>
+          <p className="mt-2 max-w-sm text-sm text-slate-500">
             {search || filter !== "all"
-              ? "Try adjusting your search or filter."
-              : "Create your first project to get started."}
+              ? "Try adjusting your search or filter to find what you're looking for."
+              : "Get started by creating your first certificate project. It only takes a minute."}
           </p>
           {!search && filter === "all" && (
-            <Button className="mt-5 gap-2" onClick={() => setShowModal(true)}>
+            <button
+              onClick={() => setShowModal(true)}
+              className="mt-8 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-500/40"
+            >
               <Plus className="size-4" />
               Create First Project
-            </Button>
+            </button>
           )}
         </div>
       )}

@@ -29,7 +29,7 @@ export default function LoginPage() {
     register,
     control,
     handleSubmit,
-    formState: { errors, isValid, touchedFields },
+    formState: { errors, isValid, touchedFields, isSubmitted },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     mode: "onTouched",
@@ -79,7 +79,7 @@ export default function LoginPage() {
           </span>
         </Link>
 
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-3xl font-extrabold tracking-tighter text-foreground">
           Welcome back
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -107,14 +107,15 @@ export default function LoginPage() {
               placeholder="you@example.com"
               autoComplete="email"
               autoFocus
-              className={errors.email ? "border-destructive" : touchedFields.email && !errors.email ? "border-emerald-500" : ""}
+              className={touchedFields.email && !errors.email ? "border-emerald-500 focus-visible:ring-emerald-500/20" : ""}
+              aria-invalid={!!errors.email && (touchedFields.email || isSubmitted)}
               {...register("email")}
             />
             {touchedFields.email && !errors.email && (
               <CheckCircle2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-emerald-500" />
             )}
           </div>
-          {errors.email && (
+          {errors.email && (touchedFields.email || isSubmitted) && (
             <p className="text-xs text-destructive">{errors.email.message}</p>
           )}
         </div>
@@ -136,7 +137,8 @@ export default function LoginPage() {
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               autoComplete="current-password"
-              className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+              className="pr-10"
+              aria-invalid={!!errors.password && (touchedFields.password || isSubmitted)}
               {...register("password")}
             />
             <button
@@ -153,7 +155,7 @@ export default function LoginPage() {
               )}
             </button>
           </div>
-          {errors.password && (
+          {errors.password && (touchedFields.password || isSubmitted) && (
             <p className="text-xs text-destructive">{errors.password.message}</p>
           )}
         </div>
@@ -205,7 +207,7 @@ export default function LoginPage() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">
+          <span className="bg-background px-3 font-medium tracking-widest text-foreground/70">
             New to CertiDraft?
           </span>
         </div>

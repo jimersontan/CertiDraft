@@ -31,19 +31,31 @@ interface SidebarProps {
   isAdmin?: boolean;
 }
 
-const mainNavItems = [
-  { label: "Dashboard", href: "/dashboard", icon: Home },
-  { label: "Projects", href: "/dashboard/projects", icon: FolderKanban, hasAction: true },
-  { label: "Templates", href: "/dashboard/templates", icon: FileText },
-  { label: "Recent", href: "/dashboard/recent", icon: Clock },
-  { label: "Team Members", href: "/dashboard/team", icon: Users, requiresPro: true },
-];
-
-const secondaryNavItems = [
-  { label: "Support", href: "/dashboard/support", icon: Headphones },
-  { label: "Resources", href: "/dashboard/resources", icon: BookOpen },
-  { label: "Notifications", href: "/dashboard/notifications", icon: Bell, hasBadge: true },
-  { label: "Subscription Plan", href: "/dashboard/subscription", icon: Crown },
+const navGroups = [
+  {
+    label: "General",
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: Home },
+      { label: "Projects", href: "/dashboard/projects", icon: FolderKanban, hasAction: true },
+      { label: "Templates", href: "/dashboard/templates", icon: FileText },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { label: "Recent", href: "/dashboard/recent", icon: Clock },
+      { label: "Team Members", href: "/dashboard/team", icon: Users, requiresPro: true },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { label: "Resources", href: "/dashboard/resources", icon: BookOpen },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell, hasBadge: true },
+      { label: "Subscription Plan", href: "/dashboard/subscription", icon: Crown },
+      { label: "Support", href: "/dashboard/support", icon: Headphones },
+    ],
+  },
 ];
 
 export function Sidebar({
@@ -112,114 +124,99 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Main nav */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {mainNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          const isLocked = item.requiresPro && subscriptionTier === "free";
+      {/* Grouped nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 mt-1 px-4 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                const isLocked = (item as any).requiresPro && subscriptionTier === "free";
 
-          return (
-            <div key={item.label} className="group relative">
-              <Link
-                href={isLocked ? "/dashboard/subscription" : item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  active
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : isLocked
-                      ? "text-muted-foreground/50 cursor-not-allowed"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className="size-5 flex-shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {item.hasAction && !isLocked && (
-                  <Plus className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-                )}
-                {isLocked && (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                    PRO
-                  </span>
-                )}
-              </Link>
+                return (
+                  <div key={item.label} className="group/item relative">
+                    <Link
+                      href={isLocked ? "/dashboard/subscription" : item.href}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                        active
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                          : isLocked
+                            ? "text-muted-foreground/40 cursor-not-allowed"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="size-4 flex-shrink-0" />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {(item as any).hasAction && !isLocked && (
+                        <Plus className="size-4 opacity-0 transition-opacity group/item-hover:opacity-100" />
+                      )}
+                      {isLocked && (
+                        <span className="ml-auto rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm">
+                          PRO
+                        </span>
+                      )}
+                      {(item as any).hasBadge && notificationCount > 0 && (
+                        notificationCount > 9 ? (
+                          <span className="ml-auto flex h-2 w-2 rounded-full bg-rose-500 ring-1 ring-white animate-pulse" />
+                        ) : (
+                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold leading-none text-white antialiased ring-2 ring-white">
+                            {notificationCount}
+                          </span>
+                        )
+                      )}
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-
-        <div className="my-4 border-t border-border/50" />
-
-        {secondaryNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                active
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Icon className="size-5 flex-shrink-0" />
-              <span className="flex-1">{item.label}</span>
-              {item.hasBadge && notificationCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+          </div>
+        ))}
 
         {isAdmin && (
-          <>
-            <div className="my-4 border-t border-border/50" />
+          <div>
+            <p className="mb-2 mt-1 px-4 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Admin</p>
             <Link
               href="/admin"
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-black uppercase tracking-widest transition-all duration-200 bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm hover:bg-indigo-100`}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm hover:bg-indigo-100 transition-all"
             >
-              <ShieldCheck className="size-5 flex-shrink-0" />
+              <ShieldCheck className="size-4 flex-shrink-0" />
               <span className="flex-1">Admin Panel</span>
             </Link>
-          </>
+          </div>
         )}
       </nav>
 
       {/* User section */}
-      <div className="border-t border-border/50 p-3">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+      <div className="border-t border-border/40 p-4">
+        <div className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white shadow-sm">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-medium text-foreground">
-                {userName}
-              </p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
               {(subscriptionTier === "pro" || subscriptionTier === "enterprise") && (
-                <span className="flex items-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-white uppercase shadow-sm">
-                  <Crown className="mr-0.5 size-2" /> Pro
+                <span className="flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5 text-[8px] font-black text-white shadow-sm">
+                  <Crown className="size-2" /> Pro
                 </span>
               )}
             </div>
-            <p className="truncate text-xs text-muted-foreground">
-              {userEmail}
-            </p>
+            <p className="truncate text-[11px] text-muted-foreground">{userEmail}</p>
           </div>
+          <form action={signOut}>
+            <button
+              type="submit"
+              title="Logout"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </form>
         </div>
-        <form action={signOut} className="mt-1">
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-destructive"
-          >
-            <LogOut className="size-5" />
-            Logout
-          </Button>
-        </form>
       </div>
     </div>
   );
@@ -260,7 +257,7 @@ export function Sidebar({
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] border-r border-border/50 bg-card lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] border-r border-border/40 bg-card shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:block">
         {sidebarContent}
       </aside>
     </>

@@ -69,6 +69,7 @@ export default async function DashboardPage() {
       description: `${Math.round((dashboard.usageCount / dashboard.planLimit) * 100)}% of limit used`,
       icon: <BarChart3 className="size-5 text-emerald-600" />,
       bgColor: "bg-emerald-50",
+      usagePercent: Math.round((dashboard.usageCount / dashboard.planLimit) * 100),
     },
     {
       title: "Total Certificates",
@@ -84,52 +85,70 @@ export default async function DashboardPage() {
       <DashboardRealtimeBridge />
 
       {/* Welcome Section */}
-      <section className="rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/[0.03] px-6 py-8 shadow-sm">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+      <section
+        className="relative overflow-hidden rounded-2xl border border-slate-100 px-6 py-8 shadow-sm"
+        style={{ background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #fafbff 100%)' }}
+      >
+        {/* Mesh blobs */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-indigo-100/60 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 left-1/3 h-32 w-32 rounded-full bg-blue-100/40 blur-2xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.025]"
+          style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, #6366f1 1px, transparent 0)', backgroundSize: '28px 28px' }} />
+
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
               Welcome back, {dashboard.greetingName}! 👋
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Track your certificate batches, manage projects, and generate
-              professional certificates in minutes.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Track your certificate batches, manage projects, and generate professional certificates in minutes.
             </p>
           </div>
-          <Button size="lg" className="gap-2 shadow-md shadow-primary/20" asChild>
-            <Link href="/dashboard/projects">
-              <Plus className="size-5" />
-              Create New Certificate
-            </Link>
-          </Button>
+          <Link
+            href="/dashboard/projects"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-500/40"
+          >
+            <Plus className="size-5" />
+            Create New Certificate
+          </Link>
         </div>
       </section>
 
       {/* Stats Grid */}
       <section className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
-          <Card
+          <div
             key={stat.title}
-            className="border-border/50 transition-shadow duration-200 hover:shadow-md"
+            className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-200 hover:border-indigo-200 hover:shadow-md"
           >
-            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-              <div>
-                <CardDescription className="text-sm font-medium">
-                  {stat.title}
-                </CardDescription>
-                <CardTitle className="mt-2 text-3xl font-bold tabular-nums">
-                  {typeof stat.value === "number" 
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{stat.title}</p>
+                <p className="mt-2 font-sans text-3xl font-bold tabular-nums tracking-tight text-slate-900">
+                  {typeof stat.value === "number"
                     ? new Intl.NumberFormat("en-US").format(stat.value)
                     : stat.value}
-                </CardTitle>
+                </p>
               </div>
-              <div className={`rounded-xl ${stat.bgColor} p-3`}>
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${stat.bgColor}`}>
                 {stat.icon}
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
-            </CardContent>
-          </Card>
+            </div>
+            {typeof (stat as any).usagePercent === "number" && (
+              <div className="mt-4">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      (stat as any).usagePercent >= 100 ? 'bg-red-500' :
+                      (stat as any).usagePercent >= 80  ? 'bg-amber-500' : 'bg-indigo-600'
+                    }`}
+                    style={{ width: `${Math.min((stat as any).usagePercent, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-slate-400">{stat.description}</p>
+          </div>
         ))}
       </section>
 
@@ -253,20 +272,38 @@ export default async function DashboardPage() {
                 </table>
               </div>
             ) : (
-              <div className="rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 px-6 py-14 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                  <FolderKanban className="size-7 text-primary" />
+              <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-16 text-center">
+                {/* Ghost certificate outlines */}
+                <div className="pointer-events-none absolute inset-0 flex items-end justify-center gap-4 overflow-hidden px-8 pb-4">
+                  {[0.35, 0.2, 0.12].map((opacity, i) => (
+                    <div
+                      key={i}
+                      className="h-28 max-w-[140px] flex-1 rounded-lg border-2 border-indigo-200 bg-indigo-50/60"
+                      style={{ opacity, transform: `translateY(${(2 - i) * 12}px) scale(${0.92 + i * 0.04})` }}
+                    >
+                      <div className="m-2 h-2 w-3/4 rounded-full bg-indigo-200/60" />
+                      <div className="mx-2 mt-1.5 h-1.5 w-1/2 rounded-full bg-indigo-100" />
+                      <div className="mx-auto mt-3 h-3 w-2/3 rounded bg-indigo-100/60" />
+                    </div>
+                  ))}
                 </div>
-                <h3 className="text-lg font-semibold">No projects yet</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  Create your first project to start generating certificates.
-                </p>
-                <Button className="mt-5 gap-2" asChild>
-                  <Link href="/dashboard/projects">
+
+                <div className="relative z-10">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 ring-8 ring-indigo-50/50">
+                    <FolderKanban className="size-7 text-indigo-500" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900">No projects yet</h3>
+                  <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">
+                    Create your first project to start generating beautiful certificates.
+                  </p>
+                  <Link
+                    href="/dashboard/projects"
+                    className="mt-8 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-300"
+                  >
                     <Plus className="size-4" />
                     Create First Project
                   </Link>
-                </Button>
+                </div>
               </div>
             )}
           </CardContent>

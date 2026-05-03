@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Plus,
   Search,
@@ -12,6 +13,13 @@ import {
   Trash2,
   Download,
   X,
+  Loader2,
+  Crown,
+  Lock,
+  Sparkles,
+  Mail,
+  Palette,
+  Infinity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +37,11 @@ import {
 } from "@/components/ui/select";
 import { BackButton } from "@/components/ui/back-button";
 import { PageHeader } from "@/components/ui/page-header";
+import { api } from "@/lib/api-client";
+import { useProjectStore, Project } from "@/lib/store";
+import { toast } from "sonner";
+import { fallbackTemplates, getTemplateElements } from "@/lib/templates";
+import { useAuth } from "@/context/AuthContext";
 
 const eventTypes = [
   "Birthday",
@@ -40,42 +53,6 @@ const eventTypes = [
   "Custom",
 ];
 
-// Mock projects data
-const mockProjects = [
-  {
-    id: "1",
-    name: "Q1 Training Certificates",
-    eventType: "Training",
-    status: "completed",
-    certificateCount: 45,
-    updatedAt: "2026-04-25",
-  },
-  {
-    id: "2",
-    name: "Annual Awards 2026",
-    eventType: "Award",
-    status: "active",
-    certificateCount: 120,
-    updatedAt: "2026-04-20",
-  },
-  {
-    id: "3",
-    name: "Graduation Batch A",
-    eventType: "Graduation",
-    status: "draft",
-    certificateCount: 0,
-    updatedAt: "2026-04-18",
-  },
-  {
-    id: "4",
-    name: "Sports Day Champions",
-    eventType: "Sports",
-    status: "completed",
-    certificateCount: 30,
-    updatedAt: "2026-04-15",
-  },
-];
-
 const statusColors: Record<string, string> = {
   draft: "border-gray-200 bg-gray-50 text-gray-600",
   active: "border-blue-200 bg-blue-50 text-blue-700",
@@ -83,15 +60,102 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ProjectsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <ProjectsContent />
+    </Suspense>
+  );
+}
+
+function ProjectsContent() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
+  const [initialTemplateId, setInitialTemplateId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const isPro = user?.plan === "pro" || user?.plan === "enterprise";
+  
+  const { 
+    projects, 
+    setProjects, 
+    isLoading, 
+    setLoading, 
+    removeProject 
+  } = useProjectStore();
 
-  const filtered = mockProjects.filter((p) => {
+  const fetchProjects = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.getProjects();
+      const rawProjects = response.data.data || [];
+      
+      // Map API response to UI state
+      const mappedProjects: Project[] = rawProjects.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        eventType: p.event_type || "Custom",
+        status: p.status || "draft",
+        certificateCount: p.certificate_count || 0,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at || p.created_at,
+        templateId: p.template_id,
+      }));
+      
+      setProjects(mappedProjects);
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+      toast.error("Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setProjects]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    const isNew = searchParams.get("new") === "true";
+    if (isNew) {
+      const tid = searchParams.get("template");
+      queueMicrotask(() => {
+        setShowModal(true);
+        if (tid) setInitialTemplateId(tid);
+      });
+    }
+  }, [searchParams]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return;
+    
+    try {
+      await api.deleteProject(id);
+      removeProject(id);
+      toast.success("Project deleted successfully");
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete project");
+    }
+  };
+
+  const filtered = projects.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === "all" || p.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  const proFeatures = [
+    { icon: Infinity, label: "Unlimited Certificates", desc: "No monthly generation limits", active: isPro },
+    { icon: Sparkles, label: "AI-Powered Citations", desc: "Smart text generation for certificates", active: isPro },
+    { icon: Palette, label: "Custom Branding", desc: "Themes, colors & premium templates", active: isPro },
+    { icon: Mail, label: "Priority Email Delivery", desc: "Fast certificate distribution", active: isPro },
+  ];
 
   return (
     <div className="space-y-6">
@@ -103,6 +167,63 @@ export default function ProjectsPage() {
           New Project
         </Button>
       </PageHeader>
+
+      {/* Pro Features Banner */}
+      <div className={`relative overflow-hidden rounded-2xl border shadow-sm transition-all ${
+        isPro 
+          ? "border-blue-200/60 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80" 
+          : "border-border/50 bg-muted/30"
+      }`}>
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              {isPro ? (
+                <div className="flex items-center gap-2 rounded-full bg-blue-600 px-2.5 py-1 shadow-sm">
+                  <Crown className="size-3 text-white" />
+                  <span className="text-[9px] font-black text-white uppercase tracking-widest">Pro Active</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-full bg-muted px-2.5 py-1">
+                  <Lock className="size-3 text-muted-foreground" />
+                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Free Plan</span>
+                </div>
+              )}
+            </div>
+            {!isPro && (
+              <Button size="sm" variant="default" className="h-7 rounded-lg px-3 text-[10px] font-black uppercase tracking-widest gap-1.5" asChild>
+                <Link href="/dashboard/subscription">
+                  <Crown className="size-3" /> Upgrade
+                </Link>
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {proFeatures.map((f) => {
+              const Icon = f.icon;
+              return (
+                <div 
+                  key={f.label} 
+                  className={`flex items-start gap-2.5 rounded-xl border p-3 transition-all ${
+                    f.active 
+                      ? "border-blue-200/50 bg-white/70 shadow-sm" 
+                      : "border-border/30 bg-muted/20 opacity-60"
+                  }`}
+                >
+                  <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                    f.active ? "bg-blue-100 text-blue-600" : "bg-muted text-muted-foreground"
+                  }`}>
+                    {f.active ? <Icon className="size-4" /> : <Lock className="size-3.5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-xs font-bold truncate ${f.active ? "text-foreground" : "text-muted-foreground"}`}>{f.label}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{f.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Search + Filter */}
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -129,7 +250,12 @@ export default function ProjectsPage() {
       </div>
 
       {/* Projects grid */}
-      {filtered.length > 0 ? (
+      {isLoading ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium">Loading projects...</p>
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((project) => (
             <Card
@@ -139,7 +265,7 @@ export default function ProjectsPage() {
               {/* Status badge */}
               <div className="absolute right-3 top-3">
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${statusColors[project.status]}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${statusColors[project.status] || statusColors.draft}`}
                 >
                   {project.status}
                 </span>
@@ -156,7 +282,7 @@ export default function ProjectsPage() {
                   {project.eventType} · {project.certificateCount} certificates
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Updated {project.updatedAt}
+                  Updated {new Date(project.updatedAt).toLocaleDateString()}
                 </p>
 
                 {/* Hover actions */}
@@ -173,7 +299,12 @@ export default function ProjectsPage() {
                   <Button size="sm" variant="outline">
                     <Download className="size-3" />
                   </Button>
-                  <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(project.id)}
+                  >
                     <Trash2 className="size-3" />
                   </Button>
                 </div>
@@ -203,17 +334,73 @@ export default function ProjectsPage() {
 
       {/* Create Project Modal */}
       {showModal && (
-        <CreateProjectModal onClose={() => setShowModal(false)} />
+        <CreateProjectModal 
+          initialTemplateId={initialTemplateId}
+          onClose={() => {
+            setShowModal(false);
+            setInitialTemplateId(null);
+          }} 
+          onSuccess={() => {
+            setShowModal(false);
+            setInitialTemplateId(null);
+            fetchProjects();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function CreateProjectModal({ onClose }: { onClose: () => void }) {
+function CreateProjectModal({ 
+  onClose, 
+  onSuccess,
+  initialTemplateId
+}: { 
+  onClose: () => void; 
+  onSuccess: () => void;
+  initialTemplateId?: string | null;
+}) {
   const [name, setName] = useState("");
-  const [eventType, setEventType] = useState("");
+  const [eventType, setEventType] = useState("graduation");
   const [description, setDescription] = useState("");
-  const [template, setTemplate] = useState("blank");
+  const [template, setTemplate] = useState(initialTemplateId || "00000000-0000-0000-0000-000000000001");
+  const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    if (initialTemplateId) {
+      const t = fallbackTemplates.find(ft => ft.id === initialTemplateId);
+      queueMicrotask(() => {
+        setTemplate(initialTemplateId);
+        if (t) setEventType(t.category.toLowerCase());
+      });
+    }
+  }, [initialTemplateId]);
+
+  const handleCreate = async () => {
+    if (!name || !eventType) return;
+    
+    setIsCreating(true);
+    try {
+      await api.createProject({
+        name,
+        event_type: eventType,
+        description,
+        template_id: template,
+        elements: getTemplateElements(template), 
+      });
+      toast.success("Project created successfully");
+      onSuccess();
+    } catch (error: any) {
+      console.error("Create project error:", error);
+      const serverError = error.response?.data?.message || "Check console for details.";
+      toast.error(`Failed to create project: ${serverError}`);
+      if (error.response?.data?.errors) {
+        console.error("Validation errors:", error.response.data.errors);
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -270,17 +457,17 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           <div className="space-y-2">
             <Label>Template</Label>
             <div className="grid grid-cols-2 gap-2">
-              {["blank", "corporate", "academic", "sports"].map((t) => (
+              {fallbackTemplates.slice(0, 4).map((t) => (
                 <button
-                  key={t}
-                  onClick={() => setTemplate(t)}
-                  className={`rounded-lg border-2 p-3 text-left text-sm font-medium capitalize transition-all ${
-                    template === t
+                  key={t.id}
+                  onClick={() => setTemplate(t.id)}
+                  className={`rounded-lg border-2 p-3 text-left text-sm font-medium transition-all ${
+                    template === t.id
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border hover:border-primary/40"
                   }`}
                 >
-                  {t === "blank" ? "Start from Blank" : t}
+                  {t.name === "Executive Excellence" ? "Start from Blank" : t.name}
                 </button>
               ))}
             </div>
@@ -288,10 +475,18 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={!name || !eventType}>Create</Button>
+          <Button variant="outline" onClick={onClose} disabled={isCreating}>Cancel</Button>
+          <Button disabled={!name || !eventType || isCreating} onClick={handleCreate}>
+            {isCreating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : "Create"}
+          </Button>
         </div>
       </div>
     </div>
   );
 }
+

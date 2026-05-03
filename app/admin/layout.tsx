@@ -20,16 +20,19 @@ export default async function AdminLayout({
     redirect("/auth/login");
   }
 
-  // Admin access check
+  const adminEmail = user.email?.toLowerCase().trim();
+  const isFallbackAdmin = adminEmail === 'admin@certidraft.com';
+  
   const { data: profile } = await supabase
     .from("users")
     .select("full_name, role")
     .eq("id", user.id)
     .maybeSingle();
 
-  const isAdmin = profile?.role === "admin" || user.email === "admin@certidraft.com"; 
+  const isAdmin = isFallbackAdmin || profile?.role === "admin" || profile?.role === "super_admin";
 
   if (!isAdmin) {
+    console.log(`[AdminLayout] Access denied for ${adminEmail}. Redirecting to dashboard.`);
     redirect("/dashboard");
   }
 

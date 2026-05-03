@@ -29,23 +29,27 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("users")
-    .select("full_name, subscription_tier")
+    .select("full_name, plan, role")
     .eq("id", user.id)
     .maybeSingle();
 
   if (profile) {
     fullName = profile.full_name || fullName;
-    subscriptionTier = profile.subscription_tier || subscriptionTier;
+    subscriptionTier = profile.plan || subscriptionTier;
   }
 
-  return (
-    <div className="min-h-screen bg-muted/30">
-      <Sidebar
-        userName={fullName}
-        userEmail={user.email || ""}
-        subscriptionTier={subscriptionTier}
-        notificationCount={3}
-      />
+      const adminEmail = user.email?.toLowerCase().trim();
+      const isAdminUser = profile?.role === "admin" || profile?.role === "super_admin" || adminEmail === "admin@certidraft.com";
+      
+      return (
+        <div className="min-h-screen bg-muted/30">
+          <Sidebar
+            userName={fullName}
+            userEmail={user.email || ""}
+            subscriptionTier={subscriptionTier}
+            notificationCount={3}
+            isAdmin={isAdminUser}
+          />
 
       {/* Main content area — offset by sidebar width on desktop */}
       <main className="min-h-screen pt-14 lg:pl-[240px] lg:pt-0">

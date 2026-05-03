@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Plus,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/auth/actions";
@@ -27,6 +28,7 @@ interface SidebarProps {
   userAvatar?: string;
   subscriptionTier?: string;
   notificationCount?: number;
+  isAdmin?: boolean;
 }
 
 const mainNavItems = [
@@ -49,13 +51,16 @@ export function Sidebar({
   userEmail,
   subscriptionTier = "free",
   notificationCount = 0,
+  isAdmin = false,
 }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close mobile menu on route change
   useEffect(() => {
-    setMobileOpen(false);
+    queueMicrotask(() => {
+      setMobileOpen(false);
+    });
   }, [pathname]);
 
   // Close on escape key
@@ -167,6 +172,19 @@ export function Sidebar({
             </Link>
           );
         })}
+
+        {isAdmin && (
+          <>
+            <div className="my-4 border-t border-border/50" />
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-black uppercase tracking-widest transition-all duration-200 bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm hover:bg-indigo-100`}
+            >
+              <ShieldCheck className="size-5 flex-shrink-0" />
+              <span className="flex-1">Admin Panel</span>
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* User section */}
@@ -176,9 +194,16 @@ export function Sidebar({
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {userName}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-medium text-foreground">
+                {userName}
+              </p>
+              {(subscriptionTier === "pro" || subscriptionTier === "enterprise") && (
+                <span className="flex items-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-white uppercase shadow-sm">
+                  <Crown className="mr-0.5 size-2" /> Pro
+                </span>
+              )}
+            </div>
             <p className="truncate text-xs text-muted-foreground">
               {userEmail}
             </p>

@@ -55,6 +55,43 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // Admin protection: redirect non-admin users away from /admin
+    if (request.nextUrl.pathname.startsWith("/admin")) {
+      if (!user) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/login";
+        return NextResponse.redirect(url);
+      }
+      
+      // Check role
+      const adminEmail = user.email?.toLowerCase().trim();
+      const isFallbackAdmin = adminEmail === 'admin@certidraft.com';
+      
+      let hasAdminRole = isFallbackAdmin;
+      let adminRole = "fallback";
+      
+      if (!isFallbackAdmin) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        hasAdminRole = !!(userData && (userData.role === 'admin' || userData.role === 'super_admin'));
+        adminRole = userData?.role || "unknown";
+      }
+        
+      if (!hasAdminRole) {
+        console.log(`[Middleware] Unauthorized admin access attempt by ${adminEmail}. Redirecting to dashboard.`);
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        url.searchParams.set("error", "unauthorized_admin");
+        return NextResponse.redirect(url);
+      }
+      
+      console.log(`[Middleware] Admin access granted to ${adminEmail} (Role: ${adminRole})`);
+    }
+
     // Redirect authenticated users away from /auth pages to /dashboard
     if (
       user &&

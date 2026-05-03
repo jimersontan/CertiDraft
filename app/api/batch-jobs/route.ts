@@ -159,6 +159,7 @@ export async function POST(request: Request) {
     templateId: insertPayload.template_id,
     bucket: insertPayload.storage_bucket,
     designSnapshot: insertPayload.design_snapshot,
+    userId: user.id,
   });
 
   const { error: queueUpdateError } = await admin

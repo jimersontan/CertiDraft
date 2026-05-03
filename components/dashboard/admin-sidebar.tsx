@@ -38,7 +38,9 @@ export function AdminSidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    setMobileOpen(false);
+    queueMicrotask(() => {
+      setMobileOpen(false);
+    });
   }, [pathname]);
 
   const isActive = (href: string) => {

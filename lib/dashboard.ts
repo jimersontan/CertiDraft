@@ -28,6 +28,9 @@ export type RecentBatch = {
 export type DashboardData = {
   greetingName: string;
   profileName: string;
+  plan: string;
+  planLimit: number;
+  usageCount: number;
   stats: DashboardStats;
   recentBatches: RecentBatch[];
 };
@@ -53,6 +56,11 @@ export async function getDashboardData(input: {
   }
 
   const profile = asRecord(profileResult.data);
+  const plan = pickString(profile, ["plan"]) || "free";
+  const { SUBSCRIPTION_PLANS } = await import("@/lib/subscriptions");
+  const planDetails = SUBSCRIPTION_PLANS[plan as keyof typeof SUBSCRIPTION_PLANS] || SUBSCRIPTION_PLANS.free;
+  const usageCount = (profile?.certificates_this_month as number) || 0;
+
   const profileName =
     pickString(profile, ["full_name", "organization_name", "company_name"]) ||
     input.fallbackName ||
@@ -89,6 +97,9 @@ export async function getDashboardData(input: {
     return {
       greetingName: profileName,
       profileName,
+      plan,
+      planLimit: planDetails.limit,
+      usageCount,
       stats: {
         totalCertificates: 0,
         batchesCompleted: 0,
@@ -185,6 +196,9 @@ export async function getDashboardData(input: {
   return {
     greetingName: profileName,
     profileName,
+    plan,
+    planLimit: planDetails.limit,
+    usageCount,
     stats: {
       totalCertificates: totalCertificatesResult.count ?? 0,
       batchesCompleted: batchesCompletedResult.count ?? 0,

@@ -22,10 +22,8 @@ export const signupSchema = z
       .min(6, "Password must be at least 6 characters")
       .max(72, "Password must be less than 72 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    terms: z.literal(true, {
-      errorMap: () => ({
-        message: "You must agree to the Terms of Service and Privacy Policy",
-      }),
+    terms: z.boolean().refine((val) => val === true, {
+      message: "You must agree to the Terms of Service and Privacy Policy",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -58,9 +56,9 @@ export const createProjectSchema = z.object({
     .string()
     .min(1, "Project name is required")
     .max(100, "Project name must be less than 100 characters"),
-  eventType: z.enum(eventTypes, {
-    errorMap: () => ({ message: "Please select an event type" }),
-  }),
+  eventType: z.enum(eventTypes as unknown as [string, ...string[]], {
+    error: "Please select an event type",
+  } as any),
   description: z.string().max(500, "Description is too long").optional(),
   templateId: z.string().optional(),
 });

@@ -57,23 +57,23 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      title: "Total Certificates",
-      value: dashboard.stats.totalCertificates,
-      description: "All completed certificates",
-      icon: <BarChart3 className="size-5 text-blue-600" />,
+      title: "Current Plan",
+      value: dashboard.plan.toUpperCase(),
+      description: `Limit: ${dashboard.planLimit} certificates/mo`,
+      icon: <Plus className="size-5 text-blue-600" />,
       bgColor: "bg-blue-50",
     },
     {
-      title: "Batches Completed",
-      value: dashboard.stats.batchesCompleted,
-      description: "Successful generation runs",
-      icon: <FolderKanban className="size-5 text-emerald-600" />,
+      title: "Monthly Usage",
+      value: `${dashboard.usageCount} / ${dashboard.planLimit}`,
+      description: `${Math.round((dashboard.usageCount / dashboard.planLimit) * 100)}% of limit used`,
+      icon: <BarChart3 className="size-5 text-emerald-600" />,
       bgColor: "bg-emerald-50",
     },
     {
-      title: "This Month",
-      value: dashboard.stats.certificatesThisMonth,
-      description: "Generated since the 1st",
+      title: "Total Certificates",
+      value: dashboard.stats.totalCertificates,
+      description: "All time generated",
       icon: <FileSpreadsheet className="size-5 text-purple-600" />,
       bgColor: "bg-purple-50",
     },
@@ -117,7 +117,9 @@ export default async function DashboardPage() {
                   {stat.title}
                 </CardDescription>
                 <CardTitle className="mt-2 text-3xl font-bold tabular-nums">
-                  {new Intl.NumberFormat("en-US").format(stat.value)}
+                  {typeof stat.value === "number" 
+                    ? new Intl.NumberFormat("en-US").format(stat.value)
+                    : stat.value}
                 </CardTitle>
               </div>
               <div className={`rounded-xl ${stat.bgColor} p-3`}>

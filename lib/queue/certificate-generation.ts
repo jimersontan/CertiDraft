@@ -10,6 +10,7 @@ export type CertificateGenerationJobData = {
   templateId?: string | null;
   bucket?: string | null;
   designSnapshot?: string | null;
+  userId: string;
 };
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {

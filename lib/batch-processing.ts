@@ -241,6 +241,14 @@ export async function processCertificateGenerationJob(
       updated_at: new Date().toISOString(),
     });
 
+    // Update user usage count
+    if (processedCount > 0 && job.data.userId) {
+      await supabase.rpc('increment_usage_by', { 
+        user_id: job.data.userId, 
+        amount: processedCount 
+      });
+    }
+
     return {
       processedCount,
       totalCount: recipients.length,

@@ -1,152 +1,315 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Settings, 
-  Shield, 
   Mail, 
-  Database, 
+  CreditCard, 
+  Key, 
+  Save, 
+  RefreshCw, 
   Globe, 
-  Save,
-  Bell,
-  Lock,
-  Cloud
+  ShieldCheck,
+  Loader2,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { BackButton } from "@/components/ui/back-button";
+import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/ui/page-header";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function AdminSettingsPage() {
-  const [loading, setLoading] = useState(false);
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/admin/settings');
+        const json = await res.json();
+        if (json.status === "success") {
+          setSettings(json.data);
+        }
+      } catch (err) {
+        toast.error("Failed to load system settings");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (key: string, value: any) => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value })
+      });
+      if (res.ok) {
+        toast.success(`${key.charAt(0).toUpperCase() + key.slice(1)} settings updated`);
+        setSettings({ ...settings, [key]: value });
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err) {
+      toast.error(`Failed to update ${key} settings`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  if (isLoading && !settings) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="size-10 animate-spin text-primary opacity-20" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading configurations...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <BackButton href="/admin" label="Back to Admin" />
+    <div className="space-y-8 pb-10">
       <PageHeader 
         title="System Settings" 
-        description="Configure global platform parameters, security, and integrations."
-      >
-        <Button onClick={handleSave} disabled={loading} className="gap-2">
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Saving...
-            </span>
-          ) : (
-            <>
-              <Save className="size-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </PageHeader>
+        description="Configure platform-wide parameters, API keys, and integrations."
+      />
 
-      <div className="grid gap-6">
-        {/* General Config */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <div className="flex items-center gap-2 mb-1">
-              <Globe className="size-4 text-indigo-600" />
-              <CardTitle className="text-lg">General Configuration</CardTitle>
-            </div>
-            <CardDescription>Platform-wide branding and behavior settings.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="siteName">Site Name</Label>
-                <Input id="siteName" defaultValue="CertiDraft AI" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="supportEmail">Support Email</Label>
-                <Input id="supportEmail" defaultValue="support@certidraft.com" />
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-              <div>
-                <p className="text-sm font-semibold">Maintenance Mode</p>
-                <p className="text-xs text-muted-foreground">Disable frontend and show maintenance page.</p>
-              </div>
-              <Switch />
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="general" className="space-y-8">
+        <TabsList className="bg-muted/30 p-1 rounded-full h-12 border border-border/50">
+          <TabsTrigger value="general" className="rounded-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+            <Globe className="size-3.5 mr-2" /> General
+          </TabsTrigger>
+          <TabsTrigger value="email" className="rounded-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+            <Mail className="size-3.5 mr-2" /> Email
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="rounded-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+            <CreditCard className="size-3.5 mr-2" /> Payment
+          </TabsTrigger>
+          <TabsTrigger value="api_keys" className="rounded-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+            <Key className="size-3.5 mr-2" /> API Keys
+          </TabsTrigger>
+        </TabsList>
 
-        {/* AI & Generation */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <div className="flex items-center gap-2 mb-1">
-              <Cloud className="size-4 text-indigo-600" />
-              <CardTitle className="text-lg">AI & Certificate Generation</CardTitle>
-            </div>
-            <CardDescription>Control AI model parameters and generation limits.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="aiModel">Default AI Model</Label>
-                <Input id="aiModel" defaultValue="GPT-4o" />
+        <TabsContent value="general">
+          <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="bg-muted/10 p-8">
+              <CardTitle className="text-xl font-black tracking-tight">General Configuration</CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest">Basic platform identity and display settings.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Site Name</label>
+                <Input 
+                  value={settings?.general?.site_name} 
+                  onChange={(e) => setSettings({...settings, general: {...settings.general, site_name: e.target.value}})}
+                  className="rounded-full bg-muted/20 border-none ring-1 ring-border/50"
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="maxBatch">Max Batch Size (Free)</Label>
-                <Input id="maxBatch" type="number" defaultValue="10" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Site Description</label>
+                <Textarea 
+                  value={settings?.general?.site_description} 
+                  onChange={(e) => setSettings({...settings, general: {...settings.general, site_description: e.target.value}})}
+                  className="rounded-3xl bg-muted/20 border-none ring-1 ring-border/50 min-h-[100px]"
+                />
               </div>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-              <div>
-                <p className="text-sm font-semibold">Enable AI Citations</p>
-                <p className="text-xs text-muted-foreground">Allow users to generate text using AI.</p>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => handleSave('general', settings.general)} 
+                  disabled={isSaving}
+                  className="rounded-full px-8 shadow-lg gap-2"
+                >
+                  {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Save General Settings
+                </Button>
               </div>
-              <Switch defaultChecked />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Security */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <div className="flex items-center gap-2 mb-1">
-              <Shield className="size-4 text-red-600" />
-              <CardTitle className="text-lg">Security & Authentication</CardTitle>
-            </div>
-            <CardDescription>Configure user access and platform security policies.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-              <div>
-                <p className="text-sm font-semibold">New User Registration</p>
-                <p className="text-xs text-muted-foreground">Allow new users to sign up to the platform.</p>
+        <TabsContent value="email">
+          <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="bg-muted/10 p-8">
+              <CardTitle className="text-xl font-black tracking-tight">Email Delivery</CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest">Configure outbound mail settings and sender identity.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Sender Name</label>
+                  <Input 
+                    value={settings?.email?.sender_name} 
+                    onChange={(e) => setSettings({...settings, email: {...settings.email, sender_name: e.target.value}})}
+                    className="rounded-full bg-muted/20 border-none ring-1 ring-border/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Sender Email</label>
+                  <Input 
+                    value={settings?.email?.sender_email} 
+                    onChange={(e) => setSettings({...settings, email: {...settings.email, sender_email: e.target.value}})}
+                    className="rounded-full bg-muted/20 border-none ring-1 ring-border/50"
+                  />
+                </div>
               </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-              <div>
-                <p className="text-sm font-semibold">Two-Factor Authentication</p>
-                <p className="text-xs text-muted-foreground">Enforce 2FA for all admin accounts.</p>
+              <div className="p-4 rounded-3xl bg-blue-50 border border-blue-100 flex items-start gap-4">
+                <AlertCircle className="size-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-blue-900 uppercase tracking-widest">Domain Verification</p>
+                  <p className="text-xs text-blue-700/80 font-medium">Ensure your SendGrid sender identity is verified before changing the sender email to avoid delivery failures.</p>
+                </div>
               </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="space-y-1.5 pt-2">
-              <Label htmlFor="apiKey">Admin API Key</Label>
-              <div className="flex gap-2">
-                <Input id="apiKey" type="password" defaultValue="cd_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXX" className="font-mono" />
-                <Button variant="outline">Regenerate</Button>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => handleSave('email', settings.email)} 
+                  disabled={isSaving}
+                  className="rounded-full px-8 shadow-lg gap-2"
+                >
+                  {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Save Email Configuration
+                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payment">
+          <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="bg-muted/10 p-8">
+              <CardTitle className="text-xl font-black tracking-tight">Billing & Currency</CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest">Manage exchange rates, tax parameters, and currency display.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Primary Currency</label>
+                  <Input 
+                    value={settings?.payment?.currency} 
+                    disabled
+                    className="rounded-full bg-muted/5 border-none ring-1 ring-border/50 opacity-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Exchange Rate (USD → PHP)</label>
+                  <div className="relative">
+                    <Input 
+                      type="number"
+                      step="0.1"
+                      value={settings?.payment?.exchange_rate} 
+                      onChange={(e) => setSettings({...settings, payment: {...settings.payment, exchange_rate: parseFloat(e.target.value)}})}
+                      className="rounded-full bg-muted/20 border-none ring-1 ring-border/50 pr-10"
+                    />
+                    <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 size-8 rounded-full">
+                      <RefreshCw className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-4">Tax Rate (%)</label>
+                  <Input 
+                    type="number"
+                    value={settings?.payment?.tax_rate} 
+                    onChange={(e) => setSettings({...settings, payment: {...settings.payment, tax_rate: parseFloat(e.target.value)}})}
+                    className="rounded-full bg-muted/20 border-none ring-1 ring-border/50"
+                  />
+                </div>
+              </div>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => handleSave('payment', settings.payment)} 
+                  disabled={isSaving}
+                  className="rounded-full px-8 shadow-lg gap-2"
+                >
+                  {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Update Billing Parameters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api_keys">
+          <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="bg-muted/10 p-8">
+              <CardTitle className="text-xl font-black tracking-tight">External API Integration</CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest">Secure storage for platform secrets and service provider tokens.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="space-y-4">
+                <ApiKeyItem 
+                  label="OpenAI API Key" 
+                  value={settings?.api_keys?.openai} 
+                  onChange={(val: string) => setSettings({...settings, api_keys: {...settings.api_keys, openai: val}})}
+                />
+                <ApiKeyItem 
+                  label="SendGrid API Key" 
+                  value={settings?.api_keys?.sendgrid} 
+                  onChange={(val: string) => setSettings({...settings, api_keys: {...settings.api_keys, sendgrid: val}})}
+                />
+                <ApiKeyItem 
+                  label="Stripe Secret Key" 
+                  value={settings?.api_keys?.stripe} 
+                  onChange={(val: string) => setSettings({...settings, api_keys: {...settings.api_keys, stripe: val}})}
+                />
+              </div>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => handleSave('api_keys', settings.api_keys)} 
+                  disabled={isSaving}
+                  className="rounded-full px-8 shadow-lg gap-2"
+                >
+                  {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Save Encrypted Secrets
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ApiKeyItem({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-end ml-4">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
+        <button 
+          onClick={() => setShow(!show)}
+          className="text-[8px] font-black uppercase tracking-widest text-primary hover:underline"
+        >
+          {show ? "Hide" : "Show Key"}
+        </button>
+      </div>
+      <div className="relative">
+        <Input 
+          type={show ? "text" : "password"}
+          value={value} 
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="sk_..."
+          className="rounded-full bg-muted/20 border-none ring-1 ring-border/50 font-mono text-xs"
+        />
+        {value && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500">
+            <ShieldCheck className="size-4" />
+          </div>
+        )}
       </div>
     </div>
   );

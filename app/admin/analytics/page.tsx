@@ -1,222 +1,283 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
-  BarChart, 
-  Bar, 
+  LineChart, 
+  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   AreaChart, 
   Area,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from "recharts";
 import { 
+  Calendar, 
   Download, 
-  Calendar as CalendarIcon, 
   TrendingUp, 
   Users, 
   FileText, 
-  DollarSign 
+  DollarSign,
+  Loader2,
+  Filter,
+  Layout
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BackButton } from "@/components/ui/back-button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
+import { toast } from "sonner";
 
-const generationData = [
-  { name: "Mon", value: 1200 },
-  { name: "Tue", value: 1900 },
-  { name: "Wed", value: 3200 },
-  { name: "Thu", value: 2100 },
-  { name: "Fri", value: 4500 },
-  { name: "Sat", value: 1500 },
-  { name: "Sun", value: 800 },
-];
-
-const revenueData = [
-  { month: "Oct", rev: 8500 },
-  { month: "Nov", rev: 9200 },
-  { month: "Dec", rev: 11500 },
-  { month: "Jan", rev: 10800 },
-  { month: "Feb", rev: 12100 },
-  { month: "Mar", rev: 13400 },
-];
-
-const planData = [
-  { name: "Free", value: 442, color: "#94a3b8" },
-  { name: "Pro", value: 340, color: "#4f46e5" },
-  { name: "Enterprise", value: 62, color: "#7c3aed" },
-];
-
-const topTemplates = [
-  { name: "Corporate Excellence", count: 1250 },
-  { name: "Training Completion", count: 980 },
-  { name: "Dean's List", count: 840 },
-  { name: "Employee Month", count: 720 },
-  { name: "Award Sports", count: 540 },
-];
+const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#f43f5e', '#8b5cf6'];
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState("Last 7 Days");
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [period, setPeriod] = useState("30days");
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/admin/analytics?period=${period}`);
+        const json = await res.json();
+        if (json.status === "success") {
+          setData(json.data);
+        }
+      } catch (err) {
+        toast.error("Failed to load analytics data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [period]);
+
+  const planData = data ? [
+    { name: 'Free', value: data.plan_breakdown.free },
+    { name: 'Pro', value: data.plan_breakdown.pro },
+    { name: 'Enterprise', value: data.plan_breakdown.enterprise },
+  ] : [];
+
+  if (isLoading && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="size-10 animate-spin text-primary" />
+        <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Processing platform metrics...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <BackButton href="/admin" label="Back to Admin" />
+    <div className="space-y-8 pb-10">
       <PageHeader 
-        title="Analytics & Reports" 
-        description="Deep dive into platform metrics, usage patterns, and growth trends."
+        title="Analytics & Insights" 
+        description="Deep dive into platform performance, growth, and user behavior."
       >
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 h-9">
-            <CalendarIcon className="size-4 text-muted-foreground" />
-            {timeRange}
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 h-9">
+        <div className="flex items-center gap-3">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[160px] rounded-full bg-background shadow-sm border-border/50">
+              <Calendar className="size-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Range" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl">
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="90days">Last 90 Days</SelectItem>
+              <SelectItem value="6months">Last 6 Months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="rounded-full shadow-sm gap-2">
             <Download className="size-4" />
-            Export Report
+            Export Data
           </Button>
         </div>
       </PageHeader>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          { title: "Total Revenue", val: "$124.5k", icon: DollarSign, trend: "+12%" },
-          { title: "Avg. Certs/User", val: "42.5", icon: FileText, trend: "+5%" },
-          { title: "Churn Rate", val: "2.3%", icon: Users, trend: "-0.4%" },
-          { title: "Active Projects", val: "2,450", icon: TrendingUp, trend: "+18%" },
-        ].map((m) => (
-          <Card key={m.title} className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <m.icon className="size-4 text-muted-foreground" />
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${m.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                  {m.trend}
-                </span>
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Certificate Generation Chart */}
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-black tracking-tight">Certificate Volume</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold tracking-widest">Daily completed generations</CardDescription>
               </div>
-              <p className="text-2xl font-bold">{m.val}</p>
-              <p className="text-xs text-muted-foreground mt-1">{m.title}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Generation Chart */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Certificates Generated</CardTitle>
-            <CardDescription>Daily generation volume for the current week.</CardDescription>
+              <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10">
+                <FileText className="size-5 text-primary" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="pt-8 h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={generationData}>
+              <AreaChart data={data?.certificates_over_time}>
                 <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  <linearGradient id="colorCerts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#999' }}
+                  tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 />
-                <Area type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#999' }}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                  labelStyle={{ fontWeight: 900, marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}
+                  itemStyle={{ fontWeight: 700, fontSize: '12px' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="certificates" 
+                  stroke="#6366f1" 
+                  strokeWidth={4}
+                  fillOpacity={1} 
+                  fill="url(#colorCerts)" 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Revenue Trend */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Revenue Trend</CardTitle>
-            <CardDescription>Monthly recurring revenue growth (last 6 months).</CardDescription>
+        {/* Revenue Chart */}
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-black tracking-tight">Revenue Trend</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold tracking-widest">Monthly recurring revenue (PHP)</CardDescription>
+              </div>
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                <DollarSign className="size-5 text-emerald-600" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="pt-8 h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              <BarChart data={data?.revenue_trend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#999' }}
                 />
-                <Line type="monotone" dataKey="rev" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} />
-              </LineChart>
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#999' }}
+                  tickFormatter={(val) => `₱${val/1000}k`}
+                />
+                <Tooltip 
+                   cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                   labelStyle={{ fontWeight: 900, marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }}
+                />
+                <Bar 
+                  dataKey="revenue_php" 
+                  fill="#10b981" 
+                  radius={[8, 8, 0, 0]} 
+                  barSize={32}
+                />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Plan Breakdown */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">User Breakdown</CardTitle>
-            <CardDescription>Distribution of users across subscription plans.</CardDescription>
+        {/* User Distribution */}
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-muted/10">
+            <CardTitle className="text-lg font-black tracking-tight">User Distribution</CardTitle>
+            <CardDescription className="text-[10px] uppercase font-bold tracking-widest">Breakdown by subscription tier</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center h-[300px]">
-            <ResponsiveContainer width="100%" height={200}>
+          <CardContent className="pt-8 h-[350px] flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={planData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={8}
                   dataKey="value"
                 >
                   {planData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  formatter={(value) => <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{value}</span>}
+                />
               </PieChart>
             </ResponsiveContainer>
-            <div className="flex gap-4 mt-6">
-              {planData.map((p) => (
-                <div key={p.name} className="flex items-center gap-2">
-                  <div className="size-3 rounded-full" style={{ backgroundColor: p.color }} />
-                  <span className="text-xs font-medium text-muted-foreground">{p.name}</span>
-                  <span className="text-xs font-bold">{Math.round((p.value / 844) * 100)}%</span>
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
 
-        {/* Top Templates */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Top Performing Templates</CardTitle>
-            <CardDescription>Most frequently used certificate designs.</CardDescription>
+        {/* Popular Templates */}
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-muted/10">
+            <CardTitle className="text-lg font-black tracking-tight">Top Templates</CardTitle>
+            <CardDescription className="text-[10px] uppercase font-bold tracking-widest">Most popular certificate layouts</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
-            <div className="space-y-5">
-              {topTemplates.map((t) => (
-                <div key={t.name} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span>{t.name}</span>
-                    <span className="text-muted-foreground">{t.count.toLocaleString()} uses</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full bg-indigo-600 rounded-full" 
-                      style={{ width: `${(t.count / 1250) * 100}%` }} 
-                    />
+          <CardContent className="pt-8">
+            <div className="space-y-6">
+              {data?.top_templates.map((template: any, i: number) => (
+                <div key={i} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="size-8 rounded-xl bg-muted/30 flex items-center justify-center text-[10px] font-black">
+                      #{i + 1}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex justify-between items-end">
+                        <span className="text-sm font-bold">{template.name}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{template.uses} USES</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted/30 overflow-hidden">
+                        <div 
+                          className="h-full bg-indigo-600 rounded-full transition-all duration-1000" 
+                          style={{ width: `${(template.uses / data.top_templates[0].uses) * 100}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="w-full mt-6 text-xs font-semibold">View All Templates</Button>
           </CardContent>
         </Card>
       </div>

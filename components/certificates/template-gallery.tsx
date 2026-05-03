@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Search, Sparkles } from "lucide-react";
+import { Heart, Search, Sparkles, Crown, Lock } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,8 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
   const [selectedCategory, setSelectedCategory] =
     useState<TemplateCategory>("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const { user } = useAuth();
+  const isPro = user?.plan === "pro" || user?.plan === "enterprise";
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -222,8 +225,17 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
                         </div>
 
                         <div className="relative flex aspect-[4/3] flex-col justify-between rounded-2xl border border-white/20 bg-black/10 p-5 backdrop-blur-sm">
+                          {template.isPremium && !isPro && (
+                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md rounded-2xl">
+                              <Lock className="size-8 text-white mb-2" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/90">Premium Only</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-white/75">
-                            <span>CertiDraft</span>
+                            <span className="flex items-center gap-1">
+                              {template.isPremium && <Crown className="size-2.5 text-amber-400" />}
+                              CertiDraft
+                            </span>
                             <span>{template.style}</span>
                           </div>
 
@@ -256,6 +268,11 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
                           >
                             {template.category}
                           </span>
+                          {template.isPremium && (
+                            <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-black text-amber-700 uppercase tracking-widest border border-amber-500/20">
+                              <Crown className="size-2.5" /> Pro
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground">
                             {template.industry}
                           </span>
@@ -280,11 +297,19 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
                       >
                         {isFavorite ? "Favorited" : "Favorite"}
                       </Button>
-                      <Button asChild className="flex-1">
-                        <Link href={`/builder?template=${template.id}`}>
-                          Use Template
-                        </Link>
-                      </Button>
+                      {template.isPremium && !isPro ? (
+                        <Button asChild className="flex-1 bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20">
+                          <Link href="/dashboard/subscription">
+                            Upgrade
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button asChild className="flex-1">
+                          <Link href={`/builder?template=${template.id}`}>
+                            Use Template
+                          </Link>
+                        </Button>
+                      )}
                     </CardFooter>
                   </Card>
                 );

@@ -1,32 +1,4 @@
-const testimonials = [
-  {
-    quote:
-      "CertiDraft has saved us over 40 hours per month. What used to take our team days now takes minutes. The QR verification feature gives our certificates real credibility.",
-    name: "Sarah Mitchell",
-    role: "Head of Learning & Development",
-    company: "Nexus Corp",
-    initials: "SM",
-    color: "bg-blue-500",
-  },
-  {
-    quote:
-      "The AI citation feature is a game-changer for our university. Students receive perfectly formatted, verifiable certificates without any manual effort from our staff.",
-    name: "Dr. Kevin Park",
-    role: "Dean of Academic Affairs",
-    company: "Pacific State University",
-    initials: "KP",
-    color: "bg-teal-500",
-  },
-  {
-    quote:
-      "We needed a solution that could handle thousands of certificates for our global hackathon. CertiDraft delivered flawlessly — bulk generation via CSV is incredible.",
-    name: "Amira Rossi",
-    role: "Community Manager",
-    company: "DevConnect Global",
-    initials: "AR",
-    color: "bg-blue-600",
-  },
-];
+const testimonials: any[] = [];
 
 export function TestimonialsSection() {
   return (
@@ -57,7 +29,7 @@ export function TestimonialsSection() {
 
         {/* Testimonial cards */}
         <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((testimonial) => (
+          {testimonials.length > 0 ? testimonials.map((testimonial) => (
             <div
               key={testimonial.name}
               className="group relative rounded-2xl border border-border/50 bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5"
@@ -95,7 +67,11 @@ export function TestimonialsSection() {
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="col-span-full py-12 text-center text-muted-foreground italic">
+              New success stories coming soon...
+            </div>
+          )}
         </div>
       </div>
     </section>

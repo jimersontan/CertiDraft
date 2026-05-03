@@ -57,7 +57,7 @@ export async function signUp(formData: FormData) {
         id: data.user.id,
         email: data.user.email,
         full_name: fullName,
-        subscription_tier: "free",
+        plan: "free",
       });
 
       if (profileError) {
@@ -129,7 +129,7 @@ export async function signIn(formData: FormData) {
                 email,
                 full_name: "System Admin",
                 role: "admin",
-                subscription_tier: "enterprise"
+                plan: "enterprise"
               });
             } catch (e) {
               console.error("Failed to insert admin profile:", e);

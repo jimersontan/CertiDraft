@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { certificateQueue } from '@/lib/queue';
+import { getCertificateQueue } from '@/lib/queue';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
@@ -52,9 +52,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Add job to queue
-    const job = await certificateQueue.add('generate-certificates', {
+    const queue = getCertificateQueue();
+    if (!queue) {
+      return errorResponse('SERVER_ERROR', 'Background processing is currently unavailable. Please contact support.', 503);
+    }
+
+    const job = await queue.add('generate-certificates', {
       projectId: project_id,
-      uploadId: upload_id,
+      upload_id: upload_id,
       userId: user.id,
       aiEnabled: ai_enabled,
       batchSize: count, // Pass batch size to increment usage later

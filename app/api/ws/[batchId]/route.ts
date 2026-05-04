@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { WebSocketServer } from 'ws';
-import { certificateQueue } from '@/lib/queue';
 
 // Note: Standard Next.js App Router doesn't support WebSocket upgrades in Route Handlers.
 // This file serves as a template for a custom server or a specialized environment.

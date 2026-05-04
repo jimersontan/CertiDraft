@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { certificateQueue } from '@/lib/queue';
+import { getCertificateQueue } from '@/lib/queue';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
@@ -16,7 +16,12 @@ export async function GET(
     const { batchId } = await params;
 
     // Get job status
-    const job = await certificateQueue.getJob(batchId);
+    const queue = getCertificateQueue();
+    if (!queue) {
+       return errorResponse('SERVER_ERROR', 'Queue system unavailable', 503);
+    }
+    
+    const job = await queue.getJob(batchId);
     if (!job) {
       return errorResponse('NOT_FOUND', 'Batch not found', 404);
     }

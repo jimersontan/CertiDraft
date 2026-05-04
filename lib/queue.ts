@@ -1,21 +1,36 @@
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null,
-});
+let connection: IORedis | null = null;
+let certificateQueue: Queue | null = null;
 
-export const certificateQueue = new Queue('certificates', {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-    removeOnComplete: false,
-  },
-});
+export const getCertificateQueue = () => {
+  if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
+    return null; // Gracefully handle missing Redis
+  }
+
+  if (!connection) {
+    connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      maxRetriesPerRequest: null,
+    });
+  }
+
+  if (!certificateQueue) {
+    certificateQueue = new Queue('certificates', {
+      connection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: false,
+      },
+    });
+  }
+
+  return certificateQueue;
+};
 
 // The worker would typically run in a separate process
 // But we can define it here for local/dev simplicity if needed

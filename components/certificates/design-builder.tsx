@@ -20,6 +20,7 @@ import {
   Sparkles,
   MessageSquareText,
   BrainCircuit,
+  Eye,
 } from "lucide-react";
 import {
   ChangeEvent,
@@ -39,7 +40,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api-client";
 import { Palette, Crown, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 import { hasFeature, getPlanDetails } from "@/lib/subscriptions";
 
 type FabricModule = typeof import("fabric");
@@ -147,6 +148,7 @@ export function DesignBuilder({ templateId }: DesignBuilderProps) {
   }, [selectedTemplate.primaryColor]);
 
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
 
@@ -717,17 +719,18 @@ export function DesignBuilder({ templateId }: DesignBuilderProps) {
 
     const imageData = canvas.toDataURL({
       format: "png",
-      multiplier: 2,
+      multiplier: 3, // High quality multiplier
     });
 
     const pdf = new jsPDF({
       orientation: "landscape",
-      unit: "px",
-      format: [A4_WIDTH, A4_HEIGHT],
+      unit: "mm",
+      format: "a4",
     });
 
-    pdf.addImage(imageData, "PNG", 0, 0, A4_WIDTH, A4_HEIGHT);
-    pdf.save(`${selectedTemplate.id}.pdf`);
+    // A4 landscape is 297mm x 210mm
+    pdf.addImage(imageData, "PNG", 0, 0, 297, 210);
+    pdf.save(`${selectedTemplate.name.replace(/\s+/g, "_")}_Design.pdf`);
     
     // Update usage count
     try {
@@ -758,12 +761,12 @@ export function DesignBuilder({ templateId }: DesignBuilderProps) {
 
     const imageData = canvas.toDataURL({
       format: "png",
-      multiplier: 2,
+      multiplier: 3,
     });
 
     const link = document.createElement("a");
     link.href = imageData;
-    link.download = `${selectedTemplate.id}.png`;
+    link.download = `${selectedTemplate.name.replace(/\s+/g, "_")}.png`;
     link.click();
     
     // Update usage count
@@ -934,6 +937,10 @@ export function DesignBuilder({ templateId }: DesignBuilderProps) {
             <Button variant="outline" onClick={() => persistDraft()}>
               <Save className="size-4" />
               Save
+            </Button>
+            <Button variant="outline" onClick={() => setIsPreviewOpen(true)}>
+              <Eye className="size-4" />
+              Preview
             </Button>
             <Button variant="outline" onClick={exportPdf}>
               <FileDown className="size-4" />
@@ -1332,6 +1339,54 @@ export function DesignBuilder({ templateId }: DesignBuilderProps) {
                 </div>
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="w-full max-w-[95vw] lg:max-w-[800px] aspect-square p-0 overflow-hidden border-none shadow-[0_32px_128px_rgba(0,0,0,0.3)] rounded-[40px] bg-white sm:max-w-none flex flex-col items-center justify-center">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Certificate Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center w-full h-full p-6 lg:p-12">
+            <div className="relative mb-8 text-center">
+               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Design Preview</h2>
+               <p className="text-slate-500 text-xs font-medium uppercase tracking-[0.2em] mt-1">High fidelity rendering</p>
+            </div>
+            
+            <div className="relative group w-full flex justify-center">
+              {/* Outer glow */}
+              <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-[40px] opacity-50" />
+              
+              <div className="relative overflow-hidden rounded-[20px] shadow-[0_24px_48px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center justify-center bg-white">
+                <img 
+                  src={canvasRef.current?.toDataURL({ multiplier: 2 })} 
+                  alt="Certificate Preview" 
+                  className="max-w-full h-auto object-contain scale-[0.9]"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-10 flex items-center gap-4">
+               <Button 
+                variant="outline" 
+                className="bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl"
+                onClick={() => setIsPreviewOpen(false)}
+               >
+                 Back to Editor
+               </Button>
+               <Button 
+                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 rounded-xl font-bold px-8"
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  exportPdf();
+                }}
+               >
+                 <FileDown className="mr-2 size-4" />
+                 Download PDF
+               </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

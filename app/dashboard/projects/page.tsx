@@ -295,43 +295,167 @@ function ProjectsContent() {
                 </span>
               </div>
 
-              {/* Visual Preview Area */}
+              {/* Visual Preview Area — renders actual template design at 0.25× scale */}
               {(() => {
-                const richMetadata = fallbackTemplates.find(t => t.id === project.templateId);
-                const thumbnailClass = richMetadata?.thumbnailClassName || "from-slate-700 via-slate-600 to-slate-500";
-                
+                const tpl = fallbackTemplates.find(t => t.id === project.templateId) || fallbackTemplates[0];
+                // Certificate is 595×421px in the editor; we scale to fit 100%×160px card
+                // Scale factor ≈ 0.27 (160/595)
+                const CERT_W = 595;
+                const CERT_H = 421;
+                const CARD_H = 160;
+                const scale = CARD_H / CERT_H;
+                const scaledW = CERT_W * scale;
+
                 return (
-                  <div className={`h-40 relative overflow-hidden bg-gradient-to-br ${thumbnailClass} p-4 text-white`}>
-                    {/* Glass Card Preview */}
-                    <div className="relative h-full w-full rounded-xl border border-white/20 bg-black/10 backdrop-blur-md p-3 flex flex-col justify-between shadow-lg overflow-hidden">
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="h-full w-full bg-[radial-gradient(circle_at_center,_white_0,_transparent_70%)]" />
-                      </div>
-                      
-                      <div className="relative z-10 flex items-center justify-between">
-                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/60">Certificate Project</span>
-                        <div className="size-4 rounded-full bg-white/20 flex items-center justify-center ring-1 ring-white/30">
-                          <Sparkles className="size-2 text-white" />
+                  <Link href={`/dashboard/projects/${project.id}/editor`} className="block">
+                    <div
+                      className="relative overflow-hidden bg-white"
+                      style={{ height: CARD_H, width: "100%" }}
+                    >
+                      {/* Centred, scaled certificate */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: "50%",
+                          width: CERT_W,
+                          height: CERT_H,
+                          transform: `translateX(-50%) scale(${scale})`,
+                          transformOrigin: "top center",
+                          background: "#ffffff",
+                          overflow: "hidden",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {/* Background */}
+                        <div style={{ position: "absolute", inset: 0, background: "#ffffff" }} />
+
+                        {/* Border frame */}
+                        <div style={{
+                          position: "absolute",
+                          left: 20, top: 20,
+                          width: 555, height: 381,
+                          background: tpl.secondaryColor + "18",
+                          border: `1.5px solid ${tpl.secondaryColor}30`,
+                          borderRadius: 4,
+                        }} />
+
+                        {/* Org name */}
+                        <div style={{
+                          position: "absolute",
+                          left: 150, top: 40,
+                          width: 300, height: 30,
+                          fontSize: 12,
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 500,
+                          textAlign: "center",
+                          color: "#9CA3AF",
+                          letterSpacing: "0.15em",
+                          lineHeight: "30px",
+                        }}>
+                          ORGANIZATION NAME
+                        </div>
+
+                        {/* Certificate title */}
+                        <div style={{
+                          position: "absolute",
+                          left: 100, top: 80,
+                          width: 400, height: 40,
+                          fontSize: 22,
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 700,
+                          textAlign: "center",
+                          color: tpl.primaryColor,
+                          lineHeight: "40px",
+                          letterSpacing: "0.05em",
+                        }}>
+                          {tpl.featuredText.toUpperCase()}
+                        </div>
+
+                        {/* Divider */}
+                        <div style={{
+                          position: "absolute",
+                          left: "50%",
+                          top: 132,
+                          width: 60,
+                          height: 2,
+                          background: tpl.secondaryColor,
+                          transform: "translateX(-50%)",
+                          borderRadius: 999,
+                          opacity: 0.6,
+                        }} />
+
+                        {/* Recipient name placeholder */}
+                        <div style={{
+                          position: "absolute",
+                          left: 100, top: 155,
+                          width: 400, height: 50,
+                          fontSize: 28,
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 800,
+                          textAlign: "center",
+                          color: "#111827",
+                          lineHeight: "50px",
+                          letterSpacing: "-0.02em",
+                        }}>
+                          {project.name}
+                        </div>
+
+                        {/* Description */}
+                        <div style={{
+                          position: "absolute",
+                          left: 100, top: 220,
+                          width: 400, height: 30,
+                          fontSize: 13,
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 400,
+                          textAlign: "center",
+                          color: tpl.secondaryColor,
+                          lineHeight: "30px",
+                          fontStyle: "italic",
+                        }}>
+                          For outstanding performance and achievement.
+                        </div>
+
+                        {/* Bottom accent bar */}
+                        <div style={{
+                          position: "absolute",
+                          bottom: 30,
+                          left: 50,
+                          right: 50,
+                          height: 3,
+                          background: `linear-gradient(to right, ${tpl.primaryColor}, ${tpl.secondaryColor})`,
+                          borderRadius: 999,
+                          opacity: 0.4,
+                        }} />
+
+                        {/* QR placeholder */}
+                        <div style={{
+                          position: "absolute",
+                          right: 60, bottom: 50,
+                          width: 44, height: 44,
+                          border: "1.5px solid #d1d5db",
+                          borderRadius: 4,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,6px)", gap: 2 }}>
+                            {Array.from({ length: 16 }).map((_, i) => (
+                              <div key={i} style={{
+                                width: 6, height: 6,
+                                background: Math.random() > 0.4 ? "#374151" : "transparent",
+                                borderRadius: 1,
+                              }} />
+                            ))}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="relative z-10 text-center">
-                        <h4 className="text-sm font-black tracking-tight leading-tight mb-0.5 drop-shadow-md truncate px-2">{project.name}</h4>
-                        <p className="text-[7px] font-medium text-white/70 uppercase tracking-widest">{project.eventType}</p>
-                      </div>
-
-                      <div className="relative z-10 flex items-center justify-between">
-                        <div className="flex -space-x-1.5">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="size-4 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                              <div className="size-1 rounded-full bg-white/40" />
-                            </div>
-                          ))}
-                        </div>
-                        <span className="text-[7px] font-black text-white/50 uppercase tracking-widest">v1.0</span>
-                      </div>
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
                     </div>
-                  </div>
+                  </Link>
                 );
               })()}
 

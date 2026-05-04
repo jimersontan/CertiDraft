@@ -41,8 +41,8 @@ import { getPlanDetails } from "@/lib/subscriptions";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
-import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Dialog,
   DialogContent,
@@ -156,35 +156,163 @@ export default function EditorPage() {
   };
 
   const handleExportPDF = async () => {
-    if (!canvasRef.current) return;
-    
     setIsExporting(true);
+    toast.loading("Generating PDF...", { id: "pdf-export" });
+
     try {
-      // Temporarily hide handles and rings for export
-      const canvas = canvasRef.current;
-      
-      const canvasImage = await html2canvas(canvas, {
-        scale: 3, // Higher quality
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
+      const W = 595;   // certificate width (px)
+      const H = 421;   // certificate height (px)
+      const DPR = 3;   // 3× resolution for crisp text
 
-      const imgData = canvasImage.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "px",
-        format: [595, 421], // A5-ish landscape
-      });
+      // ── Step 1: pre-load every web font used in text elements ──────────────
+      // Canvas only uses fonts that are already loaded into the document.
+      // Calling document.fonts.load() forces the browser to fetch them before
+      // we call ctx.fillText(), so text metrics will be accurate.
+      const usedFonts = [
+        ...new Set(
+          elements
+            .filter(e => e.type === "text")
+            .map(e => e.fontFamily || "Inter")
+        ),
+      ];
+      await Promise.all(
+        usedFonts.flatMap(family => [
+          document.fonts.load(`400 16px "${family}"`).catch(() => null),
+          document.fonts.load(`700 16px "${family}"`).catch(() => null),
+          document.fonts.load(`800 16px "${family}"`).catch(() => null),
+          document.fonts.load(`italic 400 16px "${family}"`).catch(() => null),
+        ])
+      );
 
-      pdf.addImage(imgData, "PNG", 0, 0, 595, 421);
+      // ── Step 2: create offscreen canvas ────────────────────────────────────
+      const offscreen = document.createElement("canvas");
+      offscreen.width  = W * DPR;
+      offscreen.height = H * DPR;
+      const ctx = offscreen.getContext("2d")!;
+      ctx.scale(DPR, DPR);
+
+      // White background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Helpers ────────────────────────────────────────────────────────────
+      /** Load an <img> element, always resolving (never rejects) */
+      const loadImg = (src: string) =>
+        new Promise<HTMLImageElement>(resolve => {
+          const img = new Image();
+          img.onload  = () => resolve(img);
+          img.onerror = () => resolve(img); // resolve with broken img on error
+          if (!src.startsWith("data:")) img.crossOrigin = "anonymous";
+          img.src = src;
+        });
+
+      /** Break text into lines that fit inside maxWidth */
+      const wrapText = (text: string, maxW: number): string[] => {
+        const lines: string[] = [];
+        for (const para of text.split("\n")) {
+          const words = para.split(" ");
+          let line = "";
+          for (const word of words) {
+            const test = line ? `${line} ${word}` : word;
+            if (ctx.measureText(test).width > maxW && line) {
+              lines.push(line);
+              line = word;
+            } else {
+              line = test;
+            }
+          }
+          if (line) lines.push(line);
+        }
+        return lines.length ? lines : [""];
+      };
+
+      // ── Step 3: draw each element in z-order ───────────────────────────────
+      for (const el of elements) {
+        ctx.save();
+        ctx.globalAlpha = el.opacity ?? 1;
+
+        // Rotation (around element centre)
+        if (el.rotation) {
+          const cx = el.x + el.width  / 2;
+          const cy = el.y + el.height / 2;
+          ctx.translate(cx, cy);
+          ctx.rotate((el.rotation * Math.PI) / 180);
+          ctx.translate(-cx, -cy);
+        }
+
+        switch (el.type) {
+          case "shape": {
+            ctx.fillStyle = el.fill || "#3B82F6";
+            ctx.fillRect(el.x, el.y, el.width, el.height);
+            break;
+          }
+
+          case "text": {
+            if (!el.content) break;
+            const fs  = el.fontSize   || 16;
+            const ff  = el.fontFamily || "Inter";
+            const fw  = el.fontWeight || "normal";
+            const fi  = el.fontStyle  || "normal";
+            const lh  = fs * 1.25;     // line-height matching CSS line-height:1.2
+
+            ctx.font          = `${fi} ${fw} ${fs}px "${ff}", sans-serif`;
+            ctx.fillStyle     = el.fill || "#000000";
+            ctx.textBaseline  = "top";
+            ctx.textAlign     = (el.textAlign || "left") as CanvasTextAlign;
+
+            const lines = wrapText(el.content, el.width);
+            const baseX =
+              el.textAlign === "center" ? el.x + el.width / 2
+            : el.textAlign === "right"  ? el.x + el.width
+            : el.x;
+
+            lines.forEach((line, i) =>
+              ctx.fillText(line, baseX, el.y + i * lh)
+            );
+            break;
+          }
+
+          case "image": {
+            if (!el.src) break;
+            const img = await loadImg(el.src);
+            if (img.naturalWidth > 0) {
+              ctx.drawImage(img, el.x, el.y, el.width, el.height);
+            } else {
+              // Placeholder for broken images
+              ctx.fillStyle = "#e5e7eb";
+              ctx.fillRect(el.x, el.y, el.width, el.height);
+            }
+            break;
+          }
+
+          case "qr": {
+            ctx.strokeStyle = "#9ca3af";
+            ctx.lineWidth   = 1;
+            ctx.strokeRect(el.x, el.y, el.width, el.height);
+            ctx.fillStyle    = "#9ca3af";
+            ctx.font         = "8px sans-serif";
+            ctx.textAlign    = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("QR", el.x + el.width / 2, el.y + el.height / 2);
+            break;
+          }
+        }
+
+        ctx.restore();
+      }
+
+      // ── Step 4: export to PDF ──────────────────────────────────────────────
+      const imgData = offscreen.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      pdf.addImage(imgData, "PNG", 0, 0, 297, 210); // A4 landscape = 297×210 mm
       pdf.save(`${projectName.replace(/\s+/g, "_")}.pdf`);
 
-      // Update usage
       await api.updateUsage();
-      toast.success("Certificate exported successfully!");
+      toast.success("PDF exported successfully!", { id: "pdf-export" });
+
     } catch (error) {
-      console.error("Export failed:", error);
-      toast.error("Failed to export PDF");
+      console.error("[ExportPDF] failed:", error);
+      toast.error("Export failed — check the console for details.", { id: "pdf-export" });
     } finally {
       setIsExporting(false);
     }
@@ -953,77 +1081,105 @@ export default function EditorPage() {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-muted/20 border-none shadow-2xl">
+        <DialogContent className="w-full max-w-[95vw] lg:max-w-[800px] aspect-square p-0 overflow-hidden bg-white border-none shadow-[0_32px_128px_rgba(0,0,0,0.3)] rounded-[40px] sm:max-w-none flex flex-col items-center justify-center">
           <DialogHeader className="sr-only">
             <DialogTitle>Certificate Preview</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center p-8 min-h-[500px]">
-            <div 
-              className="relative bg-white shadow-2xl origin-center"
-              style={{ 
-                width: "595px", 
-                height: "421px",
-                transform: "scale(1.2)"
-              }}
-            >
-              {elements.map((element) => (
-                <div
-                  key={element.id}
-                  style={{
-                    position: "absolute",
-                    left: `${element.x}px`,
-                    top: `${element.y}px`,
-                    width: `${element.width}px`,
-                    height: `${element.height}px`,
-                    opacity: element.opacity ?? 1,
-                    transform: `rotate(${element.rotation ?? 0}deg)`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: element.textAlign === "center" ? "center" : element.textAlign === "right" ? "flex-end" : "flex-start",
+          
+          <div className="flex flex-col items-center justify-center w-full h-full p-6 lg:p-12">
+            <div className="relative mb-8 text-center">
+               <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-2">
+                 <Eye className="size-3" />
+                 Live Preview
+               </div>
+               <h2 className="text-2xl font-black text-slate-900 tracking-tight">Your Certificate</h2>
+            </div>
+
+            <div className="relative group w-full flex justify-center">
+              {/* Decorative background glow */}
+              <div className="absolute -inset-10 bg-primary/5 blur-[100px] rounded-full opacity-50" />
+              
+              <div className="relative overflow-hidden rounded-xl shadow-[0_24px_48px_rgba(0,0,0,0.1)] border border-slate-100 bg-white flex items-center justify-center">
+                <div 
+                  className="relative origin-center scale-[0.5] sm:scale-[0.7] md:scale-[0.9] lg:scale-100"
+                  style={{ 
+                    width: "595px", 
+                    height: "421px",
+                    aspectRatio: "595/421"
                   }}
                 >
-                  {element.type === "text" && (
-                    <p style={{
-                      fontSize: `${element.fontSize}px`,
-                      fontFamily: element.fontFamily,
-                      fontWeight: element.fontWeight,
-                      fontStyle: element.fontStyle,
-                      color: element.fill,
-                      textAlign: element.textAlign,
-                      width: "100%",
-                      margin: 0,
-                      lineHeight: "1.2",
-                    }}>
-                      {element.content}
-                    </p>
-                  )}
-                  {element.type === "qr" && (
-                    <div className="flex h-full w-full items-center justify-center rounded bg-gray-100/50">
-                      <QrCode className="size-2/3 text-gray-400" />
+                  {elements.map((element) => (
+                    <div
+                      key={element.id}
+                      style={{
+                        position: "absolute",
+                        left: `${element.x}px`,
+                        top: `${element.y}px`,
+                        width: `${element.width}px`,
+                        height: `${element.height}px`,
+                        opacity: element.opacity ?? 1,
+                        transform: `rotate(${element.rotation ?? 0}deg)`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: element.textAlign === "center" ? "center" : element.textAlign === "right" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      {element.type === "text" && (
+                        <p style={{
+                          fontSize: `${element.fontSize}px`,
+                          fontFamily: element.fontFamily,
+                          fontWeight: element.fontWeight,
+                          fontStyle: element.fontStyle,
+                          color: element.fill,
+                          textAlign: element.textAlign,
+                          width: "100%",
+                          margin: 0,
+                          lineHeight: "1.2",
+                        }}>
+                          {element.content}
+                        </p>
+                      )}
+                      {element.type === "qr" && (
+                        <div className="flex h-full w-full items-center justify-center rounded bg-gray-100/50">
+                          <QrCode className="size-2/3 text-gray-400" />
+                        </div>
+                      )}
+                      {element.type === "image" && element.src && (
+                        <img 
+                          src={element.src} 
+                          alt="" 
+                          className="h-full w-full object-contain"
+                        />
+                      )}
+                      {element.type === "shape" && (
+                        <div className="h-full w-full" style={{ backgroundColor: element.fill }} />
+                      )}
                     </div>
-                  )}
-                  {element.type === "image" && element.src && (
-                    <img 
-                      src={element.src} 
-                      alt="" 
-                      className="h-full w-full object-contain"
-                    />
-                  )}
-                  {element.type === "shape" && (
-                    <div className="h-full w-full" style={{ backgroundColor: element.fill }} />
-                  )}
+                  ))}
                 </div>
-              ))}
+              </div>
+            </div>
+
+            <div className="mt-12 flex items-center gap-3">
+               <Button 
+                variant="ghost" 
+                className="text-slate-500 font-bold hover:bg-slate-100 rounded-xl px-6"
+                onClick={() => setIsPreviewOpen(false)}
+               >
+                 Keep Editing
+               </Button>
+               <Button 
+                className="bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-900/20 rounded-xl px-8 h-12 font-bold"
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  handleExportPDF();
+                }}
+               >
+                 <Download className="mr-2 size-4" />
+                 Download PDF
+               </Button>
             </div>
           </div>
-          <DialogFooter className="bg-card p-4 border-t border-border/50">
-            <div className="flex w-full items-center justify-between">
-              <p className="text-xs text-muted-foreground italic">
-                Preview mode: elements are not editable.
-              </p>
-              <Button onClick={() => setIsPreviewOpen(false)}>Close Preview</Button>
-            </div>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

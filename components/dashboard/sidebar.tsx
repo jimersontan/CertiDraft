@@ -45,7 +45,6 @@ const navGroups = [
     label: "System",
     items: [
       { label: "Recent", href: "/dashboard/recent", icon: Clock },
-      { label: "Team Members", href: "/dashboard/team", icon: Users, requiresPro: true },
     ],
   },
   {

@@ -11,6 +11,7 @@ import {
   createClient,
   hasSupabaseServerEnv,
 } from "@/lib/supabase/server";
+import { getPlanDetails } from "@/lib/subscriptions";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -36,11 +37,13 @@ export default async function TeamPage() {
   // Check subscription tier
   const { data: profile } = await supabase
     .from("users")
-    .select("subscription_tier")
+    .select("plan, role")
     .eq("id", user.id)
     .maybeSingle();
 
-  const isPro = profile?.subscription_tier === "pro" || profile?.subscription_tier === "enterprise";
+  const isAdmin = profile?.role === "admin" || profile?.role === "super_admin" || user.email === "admin@certidraft.com";
+  const planDetails = getPlanDetails(profile?.plan);
+  const isPro = planDetails.hasTeamSupport || isAdmin;
 
   return (
     <div className="space-y-8">

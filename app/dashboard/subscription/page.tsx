@@ -191,7 +191,10 @@ export default function SubscriptionPage() {
         window.open(portalUrl, "_blank");
       }, 1000);
     } else {
-      toast.error("Billing portal is only available in production environments with a configured Stripe account.");
+      toast.error("Billing portal setup required.", {
+        description: "Please configure NEXT_PUBLIC_STRIPE_BILLING_PORTAL_URL in your .env.local file.",
+        duration: 5000
+      });
     }
   };
 

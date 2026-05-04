@@ -295,10 +295,45 @@ function ProjectsContent() {
                 </span>
               </div>
 
-              {/* Thumbnail placeholder */}
-              <div className="flex h-32 items-center justify-center rounded-t-lg bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5">
-                <FolderKanban className="size-10 text-primary/30" />
-              </div>
+              {/* Visual Preview Area */}
+              {(() => {
+                const richMetadata = fallbackTemplates.find(t => t.id === project.templateId);
+                const thumbnailClass = richMetadata?.thumbnailClassName || "from-slate-700 via-slate-600 to-slate-500";
+                
+                return (
+                  <div className={`h-40 relative overflow-hidden bg-gradient-to-br ${thumbnailClass} p-4 text-white`}>
+                    {/* Glass Card Preview */}
+                    <div className="relative h-full w-full rounded-xl border border-white/20 bg-black/10 backdrop-blur-md p-3 flex flex-col justify-between shadow-lg overflow-hidden">
+                      <div className="absolute inset-0 opacity-10">
+                        <div className="h-full w-full bg-[radial-gradient(circle_at_center,_white_0,_transparent_70%)]" />
+                      </div>
+                      
+                      <div className="relative z-10 flex items-center justify-between">
+                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/60">Certificate Project</span>
+                        <div className="size-4 rounded-full bg-white/20 flex items-center justify-center ring-1 ring-white/30">
+                          <Sparkles className="size-2 text-white" />
+                        </div>
+                      </div>
+
+                      <div className="relative z-10 text-center">
+                        <h4 className="text-sm font-black tracking-tight leading-tight mb-0.5 drop-shadow-md truncate px-2">{project.name}</h4>
+                        <p className="text-[7px] font-medium text-white/70 uppercase tracking-widest">{project.eventType}</p>
+                      </div>
+
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex -space-x-1.5">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="size-4 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                              <div className="size-1 rounded-full bg-white/40" />
+                            </div>
+                          ))}
+                        </div>
+                        <span className="text-[7px] font-black text-white/50 uppercase tracking-widest">v1.0</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <CardContent className="p-4">
                 <h3 className="font-semibold text-foreground">{project.name}</h3>

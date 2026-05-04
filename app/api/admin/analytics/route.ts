@@ -34,7 +34,25 @@ export async function GET(request: NextRequest) {
       .eq('status', 'succeeded')
       .gte('created_at', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString());
 
-    const revenueChartData = processMonthlyRevenue(revenueData || []);
+    // Fallback: If no transactions, check if we have paid users to show a current revenue point
+    let revenueChartData = processMonthlyRevenue(revenueData || []);
+    
+    if (revenueChartData.every(r => r.revenue_php === 0)) {
+      const { data: activeUsers } = await supabase
+        .from('users')
+        .select('plan')
+        .in('plan', ['starter', 'pro', 'enterprise'])
+        .eq('status', 'active');
+      
+      const planPrices: Record<string, number> = { starter: 199, pro: 599, enterprise: 1499 };
+      const currentMrrPhp = activeUsers?.reduce((sum, u) => sum + (planPrices[u.plan?.toLowerCase() || ''] || 0), 0) || 0;
+      
+      // Update the last month with current MRR to show activity
+      if (currentMrrPhp > 0) {
+        revenueChartData[revenueChartData.length - 1].revenue_php = currentMrrPhp;
+        revenueChartData[revenueChartData.length - 1].revenue_usd = parseFloat((currentMrrPhp / PHP_EXCHANGE_RATE).toFixed(2));
+      }
+    }
 
     // 3. User Breakdown by Plan
     const { data: planData } = await supabase

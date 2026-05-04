@@ -60,31 +60,50 @@ export async function GET(request: NextRequest) {
 
     if (txError) throw txError;
 
-    const thisMonthRevenue = txData?.filter((t) => {
+    let thisMonthRevenue = txData?.filter((t) => {
       const txDate = new Date(t.created_at);
       return txDate >= startOfThisMonth;
     }).reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
 
-    const lastMonthRevenue = txData?.filter((t) => {
+    let lastMonthRevenue = txData?.filter((t) => {
       const txDate = new Date(t.created_at);
       return txDate >= startOfLastMonth && txDate < startOfThisMonth;
     }).reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
 
-    const revenueChange = lastMonthRevenue > 0 
-      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100) 
-      : 0;
-
     // 4. Active Subscriptions Breakdown
-    const { data: subsData, error: subsError } = await supabase
+    let { data: subsData, error: subsError } = await supabase
       .from('subscriptions')
       .select('id, plan, status');
 
     if (subsError) throw subsError;
 
-    const activeSubs = subsData?.filter(s => s.status === 'active') || [];
-    const freeCount = activeSubs.filter(s => s.plan === 'free').length || 0;
-    const proCount = activeSubs.filter(s => s.plan === 'pro').length || 0;
-    const enterpriseCount = activeSubs.filter(s => s.plan === 'enterprise').length || 0;
+    let activeSubs = subsData?.filter(s => s.status === 'active') || [];
+    let freeCount = activeSubs.filter(s => s.plan === 'free').length || 0;
+    let proCount = activeSubs.filter(s => s.plan === 'pro').length || 0;
+    let enterpriseCount = activeSubs.filter(s => s.plan === 'enterprise').length || 0;
+
+    // Fallback: If no subscriptions recorded, use users table
+    if (activeSubs.length === 0) {
+      const { data: planData } = await supabase
+        .from('users')
+        .select('plan')
+        .eq('status', 'active');
+      
+      freeCount = planData?.filter(u => u.plan === 'free').length || 0;
+      proCount = planData?.filter(u => u.plan === 'pro').length || 0;
+      enterpriseCount = planData?.filter(u => u.plan === 'enterprise').length || 0;
+      activeSubs = new Array(freeCount + proCount + enterpriseCount).fill({});
+
+      // Recalculate revenue based on plans
+      const planPrices: Record<string, number> = { starter: 199, pro: 599, enterprise: 1499 };
+      const mrrPhp = (proCount * planPrices.pro) + (enterpriseCount * planPrices.enterprise) + (planData?.filter(u => u.plan === 'starter').length || 0) * planPrices.starter;
+      
+      if (thisMonthRevenue === 0) thisMonthRevenue = mrrPhp / PHP_EXCHANGE_RATE;
+    }
+
+    const revenueChange = lastMonthRevenue > 0 
+      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100) 
+      : 0;
 
     // Mock churn rate for now as we don't have historical snapshots easily
     const churnRate = 2.3; 

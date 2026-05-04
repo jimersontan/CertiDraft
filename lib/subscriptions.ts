@@ -12,6 +12,7 @@ export interface PlanDetails {
   hasWhiteLabel: boolean;
   hasAPI: boolean;
   hasVerificationPortal: boolean;
+  hasTeamSupport: boolean;
 }
 
 export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
@@ -31,6 +32,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
     hasWhiteLabel: false,
     hasAPI: false,
     hasVerificationPortal: false,
+    hasTeamSupport: false,
   },
   starter: {
     name: 'Starter',
@@ -48,6 +50,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
     hasWhiteLabel: false,
     hasAPI: false,
     hasVerificationPortal: false,
+    hasTeamSupport: false,
   },
   pro: {
     name: 'Pro',
@@ -61,6 +64,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
       'Analytics dashboard',
       'Priority customer support',
       'AI-powered citations',
+      'Team collaboration (up to 5 members)',
     ],
     hasWatermark: false,
     hasAICitation: true,
@@ -69,6 +73,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
     hasWhiteLabel: false,
     hasAPI: false,
     hasVerificationPortal: false,
+    hasTeamSupport: true,
   },
   enterprise: {
     name: 'Enterprise',
@@ -81,6 +86,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
       'API access',
       'Verification portal',
       'Dedicated account management',
+      'Unlimited team members',
     ],
     hasWatermark: false,
     hasAICitation: true,
@@ -89,6 +95,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, PlanDetails> = {
     hasWhiteLabel: true,
     hasAPI: true,
     hasVerificationPortal: true,
+    hasTeamSupport: true,
   },
 };
 

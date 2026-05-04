@@ -35,7 +35,7 @@ export default async function DashboardLayout({
 
   if (profile) {
     fullName = profile.full_name || fullName;
-    subscriptionTier = profile.plan || subscriptionTier;
+    subscriptionTier = (profile.plan || subscriptionTier).toLowerCase();
   }
 
       const adminEmail = user.email?.toLowerCase().trim();

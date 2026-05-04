@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/auth/actions";
+import { getPlanDetails } from "@/lib/subscriptions";
 
 interface SidebarProps {
   userName: string;

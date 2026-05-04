@@ -76,7 +76,7 @@ export default function BillingPage() {
       if (json.status === "success") {
         setTransactions(json.data.transactions);
         setMetrics(json.data.metrics);
-        setPagination(json.pagination);
+        setPagination(json.data.pagination);
       }
     } catch (err) {
       toast.error("Failed to load billing data");

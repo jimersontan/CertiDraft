@@ -48,6 +48,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Link from "next/link";
+import { fallbackTemplates } from "@/lib/templates";
 
 interface Template {
   id: string;
@@ -143,6 +144,44 @@ export default function TemplateManagementPage() {
         </Button>
       </PageHeader>
 
+      {/* Quick Stats */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2rem] bg-indigo-600 text-white">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Total Templates</p>
+              <Layout className="size-5 opacity-50" />
+            </div>
+            <p className="text-4xl font-black">{templates.length}</p>
+            <p className="text-xs mt-2 font-medium opacity-70">Active in Library</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2rem]">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Most Popular</p>
+              <Star className="size-5 text-amber-500 fill-amber-500" />
+            </div>
+            <p className="text-xl font-black truncate">{templates.sort((a, b) => b.uses - a.uses)[0]?.name || "N/A"}</p>
+            <p className="text-xs mt-2 font-bold text-muted-foreground uppercase tracking-widest">
+              {templates.sort((a, b) => b.uses - a.uses)[0]?.uses || 0} Total Uses
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2rem]">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Library Health</p>
+              <CheckCircle2 className="size-5 text-emerald-500" />
+            </div>
+            <p className="text-4xl font-black">100%</p>
+            <p className="text-xs mt-2 font-medium text-muted-foreground">All templates operational</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-[2rem] overflow-hidden">
         <CardContent className="p-6">
@@ -183,80 +222,123 @@ export default function TemplateManagementPage() {
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Indexing Library...</p>
         </div>
       ) : filtered.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((template) => (
-            <Card key={template.id} className="group border-none shadow-xl ring-1 ring-border/50 rounded-[2rem] overflow-hidden flex flex-col hover:scale-[1.02] transition-all duration-300">
-              <div className="aspect-[1.4/1] bg-muted/30 relative overflow-hidden">
-                {template.thumbnail_url ? (
-                  <img src={template.thumbnail_url} alt={template.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <Layout className="size-10 opacity-10" />
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((template) => {
+            // Find the rich metadata for this template if it exists in fallbacks
+            const richMetadata = fallbackTemplates.find(t => t.id === template.id || t.name === template.name);
+            const thumbnailClass = richMetadata?.thumbnailClassName || "from-slate-700 via-slate-600 to-slate-500";
+            
+            return (
+              <Card key={template.id} className="group border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden flex flex-col hover:scale-[1.02] transition-all duration-500 bg-card">
+                {/* Visual Preview Area */}
+                <div className={`aspect-[1.3/1] relative overflow-hidden bg-gradient-to-br ${thumbnailClass} p-6 text-white`}>
+                  {/* Glass Card Preview */}
+                  <div className="relative h-full w-full rounded-2xl border border-white/20 bg-black/10 backdrop-blur-md p-4 flex flex-col justify-between shadow-2xl overflow-hidden">
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="h-full w-full bg-[radial-gradient(circle_at_center,_white_0,_transparent_70%)]" />
+                    </div>
+                    
+                    <div className="relative z-10 flex items-center justify-between">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">System Template</span>
+                      <Badge variant="outline" className="border-white/20 text-white/80 text-[7px] px-1.5 h-4 font-black uppercase tracking-widest bg-white/5">
+                        {template.category}
+                      </Badge>
+                    </div>
+
+                    <div className="relative z-10 text-center py-2">
+                      <h4 className="text-lg font-black tracking-tight leading-none mb-1 drop-shadow-md">{template.name}</h4>
+                      <p className="text-[8px] font-medium text-white/70 uppercase tracking-widest">Premium Layout</p>
+                    </div>
+
+                    <div className="relative z-10 flex items-center justify-between">
+                      <div className="flex -space-x-2">
+                        {[1, 2].map(i => (
+                          <div key={i} className="size-5 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                            <Layout className="size-2 text-white/50" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="size-6 rounded-lg bg-white/20 flex items-center justify-center ring-1 ring-white/30">
+                        <Star className="size-3 text-amber-400 fill-amber-400" />
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="absolute top-4 right-4 flex gap-2">
-                  {template.is_featured && (
-                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 font-black text-[8px] uppercase tracking-widest px-2 py-0.5">
-                      <Star className="size-2 mr-1 fill-amber-700" />
-                      Featured
-                    </Badge>
-                  )}
-                  <Badge variant="secondary" className="bg-white/80 backdrop-blur-md font-black text-[8px] uppercase tracking-widest px-2 py-0.5 border-none shadow-sm">
-                    {template.category}
-                  </Badge>
-                </div>
-                
-                {/* Actions Overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button size="icon" variant="secondary" className="rounded-full shadow-lg" asChild>
-                    <Link href={`/dashboard/projects?new=true&template=${template.id}`}>
-                      <Eye className="size-4" />
-                    </Link>
-                  </Button>
-                  <Button size="icon" variant="secondary" className="rounded-full shadow-lg">
-                    <Edit className="size-4" />
-                  </Button>
-                </div>
-              </div>
-              <CardHeader className="p-5 pb-0">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{template.name}</CardTitle>
-                    <CardDescription className="text-xs mt-1 line-clamp-1">{template.description}</CardDescription>
+
+                  {/* Badges */}
+                  <div className="absolute top-4 right-4 flex gap-2 z-20">
+                    {template.is_featured && (
+                      <Badge className="bg-amber-500 text-white border-none font-black text-[8px] uppercase tracking-widest px-2 py-0.5 shadow-lg shadow-amber-500/20">
+                        Featured
+                      </Badge>
+                    )}
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8 rounded-full -mr-2">
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-2xl w-48 p-2">
-                      <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs" onClick={() => handleToggleFeatured(template)}>
-                        <Star className={`size-3.5 ${template.is_featured ? 'fill-amber-500 text-amber-500' : ''}`} /> 
-                        {template.is_featured ? 'Unfeature' : 'Feature Template'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs">
-                        <Copy className="size-3.5" /> Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="my-1 opacity-50" />
-                      <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={() => { setSelectedTemplate(template); setIsDeleteOpen(true); }}>
-                        <Trash2 className="size-3.5" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  
+                  {/* Hover Actions Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] flex items-center justify-center gap-3 z-30">
+                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform" asChild title="Preview Template">
+                      <Link href={`/dashboard/projects?new=true&template=${template.id}`}>
+                        <Eye className="size-4" />
+                      </Link>
+                    </Button>
+                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform" title="Edit Properties">
+                      <Edit className="size-4" />
+                    </Button>
+                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform text-rose-600" onClick={() => { setSelectedTemplate(template); setIsDeleteOpen(true); }} title="Delete Template">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardFooter className="p-5 pt-4 mt-auto border-t border-border/40 bg-muted/5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  <FileText className="size-3" />
-                  {template.uses} Uses
-                </div>
-                <div className="text-[10px] font-bold text-muted-foreground uppercase">
-                  {new Date(template.created_at).toLocaleDateString()}
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
+
+                <CardHeader className="p-6 pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base font-black tracking-tight group-hover:text-primary transition-colors truncate max-w-[180px]">
+                        {template.name}
+                      </CardTitle>
+                      <CardDescription className="text-[11px] font-medium text-muted-foreground line-clamp-1 italic">
+                        {template.description}
+                      </CardDescription>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 rounded-full -mr-2 hover:bg-muted/50">
+                          <MoreVertical className="size-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-2xl w-48 p-2">
+                        <DropdownMenuLabel className="text-[10px] uppercase font-black tracking-widest text-muted-foreground px-2">Manage Layout</DropdownMenuLabel>
+                        <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs" onClick={() => handleToggleFeatured(template)}>
+                          <Star className={`size-3.5 ${template.is_featured ? 'fill-amber-500 text-amber-500' : ''}`} /> 
+                          {template.is_featured ? 'Remove Featured' : 'Pin to Featured'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs">
+                          <Copy className="size-3.5" /> Clone Template
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="my-1 opacity-50" />
+                        <DropdownMenuItem className="rounded-xl gap-2 font-bold text-xs text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={() => { setSelectedTemplate(template); setIsDeleteOpen(true); }}>
+                          <Trash2 className="size-3.5" /> Remove from Library
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+
+                <CardFooter className="p-6 pt-4 mt-auto border-t border-border/40 bg-muted/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileText className="size-3 text-primary" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+                      {template.uses} <span className="text-muted-foreground">Uses</span>
+                    </span>
+                  </div>
+                  <div className="px-3 py-1 rounded-full bg-muted/50 text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                    {new Date(template.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card className="border-2 border-dashed border-border/50 bg-muted/20 rounded-[2.5rem] py-20 text-center">

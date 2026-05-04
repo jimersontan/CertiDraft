@@ -50,7 +50,12 @@ type CertificateRenderData = {
 };
 
 export async function processCertificateGenerationJob(
-  job: Job<CertificateGenerationJobData>
+  job: { 
+    data: CertificateGenerationJobData; 
+    attemptsMade?: number;
+    opts?: { attempts?: number };
+    updateProgress?: (progress: number) => Promise<void>;
+  }
 ) {
   const supabase = createAdminClient();
   const bucket =
@@ -180,9 +185,11 @@ export async function processCertificateGenerationJob(
         });
 
         processedCount += 1;
-        await job.updateProgress(
-          Math.round((processedCount / recipients.length) * 100)
-        );
+        if (job.updateProgress) {
+          await job.updateProgress(
+            Math.round((processedCount / recipients.length) * 100)
+          );
+        }
         await updateBatchJob(supabase, job.data.batchJobId, {
           status: "processing",
           processed_count: processedCount,
@@ -255,7 +262,9 @@ export async function processCertificateGenerationJob(
       errors,
     };
   } catch (error) {
-    const finalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+    const attemptsMade = job.attemptsMade ?? 0;
+    const maxAttempts = job.opts?.attempts ?? 1;
+    const finalAttempt = attemptsMade + 1 >= maxAttempts;
 
     await updateBatchJob(supabase, job.data.batchJobId, {
       status: finalAttempt ? "failed" : "retrying",

@@ -45,17 +45,14 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Route protection: redirect unauthenticated users away from /dashboard
-    if (
-      !user &&
-      request.nextUrl.pathname.startsWith("/dashboard")
-    ) {
+    // 1. Protection for /dashboard
+    if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       return NextResponse.redirect(url);
     }
 
-    // Admin protection: redirect non-admin users away from /admin
+    // 2. Protection for /admin
     if (request.nextUrl.pathname.startsWith("/admin")) {
       if (!user) {
         const url = request.nextUrl.clone();
@@ -63,46 +60,17 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
       
-      // Check role
-      const adminEmail = user.email?.toLowerCase().trim();
-      const isFallbackAdmin = adminEmail === 'admin@certidraft.com';
-      
-      let hasAdminRole = isFallbackAdmin;
-      let adminRole = "fallback";
-      
-      if (!isFallbackAdmin) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        hasAdminRole = !!(userData && (userData.role === 'admin' || userData.role === 'super_admin'));
-        adminRole = userData?.role || "unknown";
-      }
-        
-      if (!hasAdminRole) {
-        console.log(`[Middleware] Unauthorized admin access attempt by ${adminEmail}. Redirecting to dashboard.`);
-        const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
-        url.searchParams.set("error", "unauthorized_admin");
-        return NextResponse.redirect(url);
-      }
-      
-      console.log(`[Middleware] Admin access granted to ${adminEmail} (Role: ${adminRole})`);
+      // Note: We skip the deep role check here to prevent timeouts.
+      // The individual /admin pages already have verifyAdminAccess checks.
     }
 
-    // Redirect authenticated users away from /auth pages to /dashboard
-    if (
-      user &&
-      request.nextUrl.pathname.startsWith("/auth")
-    ) {
+    // 3. Redirect authenticated users away from /auth pages
+    if (user && request.nextUrl.pathname.startsWith("/auth")) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
   } catch (e) {
-    // If Supabase is unreachable, allow the request through
     console.error("Supabase middleware error:", e);
   }
 

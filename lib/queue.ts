@@ -35,6 +35,8 @@ export const getCertificateQueue = () => {
 // The worker would typically run in a separate process
 // But we can define it here for local/dev simplicity if needed
 export const createWorker = () => {
+  const queueConnection = getCertificateQueue()?.opts.connection;
+  
   return new Worker('certificates', async (job: Job) => {
     const { projectId, uploadId, userId, aiEnabled } = job.data;
 
@@ -50,5 +52,5 @@ export const createWorker = () => {
     } catch (error: any) {
       throw new Error(`Batch processing failed: ${error.message}`);
     }
-  }, { connection });
+  }, { connection: queueConnection as any });
 };

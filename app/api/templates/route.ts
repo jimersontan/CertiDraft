@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
   try {
     const { data: templates, error } = await supabase
       .from('templates')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.warn('Templates table error, returning fallback templates:', error.message);

@@ -47,12 +47,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const supabase = createAdminClient();
 
+    // Only include columns that exist in the DB schema
+    const insertData = {
+      name: body.name,
+      category: body.category,
+      description: body.description,
+      accent_color: body.accent_color,
+      secondary_color: body.secondary_color,
+      is_featured: body.is_featured || false,
+      industry: body.industry || "",
+      style: body.style || "Modern",
+      elements: body.elements || [],
+      created_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('templates')
-      .insert({
-        ...body,
-        created_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -91,13 +102,25 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id, ...bodyData } = body;
 
     if (!id) {
       return NextResponse.json({ status: 'error', message: 'Missing template ID' }, { status: 400 });
     }
 
     const supabase = createAdminClient();
+
+    // Map fields and filter out unknowns
+    const updateData: any = {};
+    if (bodyData.name) updateData.name = bodyData.name;
+    if (bodyData.category) updateData.category = bodyData.category;
+    if (bodyData.description) updateData.description = bodyData.description;
+    if (bodyData.accent_color) updateData.accent_color = bodyData.accent_color;
+    if (bodyData.secondary_color) updateData.secondary_color = bodyData.secondary_color;
+    if (bodyData.is_featured !== undefined) updateData.is_featured = bodyData.is_featured;
+    if (bodyData.industry) updateData.industry = bodyData.industry;
+    if (bodyData.style) updateData.style = bodyData.style;
+    if (bodyData.elements) updateData.elements = bodyData.elements;
 
     const { data, error } = await supabase
       .from('templates')

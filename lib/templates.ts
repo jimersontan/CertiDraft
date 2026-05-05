@@ -208,14 +208,16 @@ type SupabaseTemplateRow = Partial<{
   industry: string;
   style: string;
   description: string;
-  primary_color: string;
+  accent_color: string;
   secondary_color: string;
+  featured_text: string;
 }>;
 
 export function mapTemplateRow(row: SupabaseTemplateRow): TemplateRecord {
   const category = normalizeCategory(row.category);
   const fallback =
-    fallbackTemplates.find((template) => template.category === category) ??
+    fallbackTemplates.find((t) => t.name.toLowerCase() === (row.name || "").toLowerCase()) ??
+    fallbackTemplates.find((t) => t.category === category) ??
     fallbackTemplates[0];
 
   return {
@@ -227,8 +229,8 @@ export function mapTemplateRow(row: SupabaseTemplateRow): TemplateRecord {
     description: row.description ?? fallback.description,
     thumbnailClassName: fallback.thumbnailClassName,
     accentClassName: fallback.accentClassName,
-    featuredText: fallback.featuredText,
-    primaryColor: row.primary_color ?? fallback.primaryColor,
+    featuredText: row.featured_text ?? fallback.featuredText,
+    primaryColor: row.accent_color ?? fallback.primaryColor,
     secondaryColor: row.secondary_color ?? fallback.secondaryColor,
   };
 }

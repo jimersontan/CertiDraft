@@ -42,6 +42,7 @@ import { useProjectStore, Project } from "@/lib/store";
 import { toast } from "sonner";
 import { fallbackTemplates, getTemplateElements } from "@/lib/templates";
 import { useAuth } from "@/context/AuthContext";
+import { exportProjectToPDF } from "@/lib/export-utils";
 
 const eventTypes = [
   "Birthday",
@@ -134,13 +135,54 @@ function ProjectsContent() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return;
     
+    const tid = toast.loading("Deleting project...");
     try {
       await api.deleteProject(id);
       removeProject(id);
-      toast.success("Project deleted successfully");
+      toast.success("Project deleted successfully", { id: tid });
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error("Failed to delete project");
+      toast.error("Failed to delete project", { id: tid });
+    }
+  };
+
+  const handleDuplicate = async (project: Project) => {
+    const tid = toast.loading("Duplicating project...");
+    try {
+      // 1. Fetch full project to get elements
+      const response = await api.getProject(project.id);
+      const fullProject = response.data.data;
+      
+      // 2. Create new project with same elements
+      await api.createProject({
+        name: `${project.name} (Copy)`,
+        event_type: project.eventType,
+        description: project.description,
+        template_id: project.templateId,
+        elements: fullProject.elements || [],
+      });
+      
+      toast.success("Project duplicated successfully", { id: tid });
+      fetchProjects(); // Refresh list
+    } catch (error) {
+      console.error("Duplicate error:", error);
+      toast.error("Failed to duplicate project", { id: tid });
+    }
+  };
+
+  const handleDownload = async (project: Project) => {
+    const tid = toast.loading("Preparing download...");
+    try {
+      // 1. Fetch full project to get elements
+      const response = await api.getProject(project.id);
+      const fullProject = response.data.data;
+      
+      // 2. Export to PDF
+      await exportProjectToPDF(project.name, fullProject.elements || []);
+      toast.dismiss(tid);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to prepare download", { id: tid });
     }
   };
 
@@ -476,10 +518,20 @@ function ProjectsContent() {
                       Edit
                     </Link>
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDuplicate(project)}
+                    title="Duplicate Project"
+                  >
                     <Copy className="size-3" />
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDownload(project)}
+                    title="Download PDF"
+                  >
                     <Download className="size-3" />
                   </Button>
                   <Button 
@@ -487,6 +539,7 @@ function ProjectsContent() {
                     variant="outline" 
                     className="text-destructive hover:text-destructive"
                     onClick={() => handleDelete(project.id)}
+                    title="Delete Project"
                   >
                     <Trash2 className="size-3" />
                   </Button>

@@ -153,104 +153,103 @@ export default function TemplatesPage() {
           <p className="text-sm font-medium">Loading templates...</p>
         </div>
       ) : filtered.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filtered.map((template, i) => (
-            <div
-              key={template.id}
-              className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-slate-200/80"
-            >
-              {/* Pro badge */}
-              {template.isPremium && (
-                <div className="absolute left-3 top-3 z-20 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-1 shadow-md">
-                  <Crown className="size-2.5 text-white" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white">Pro</span>
-                </div>
-              )}
-
-              {/* Thumbnail */}
-              <div className={`relative aspect-[1.4/1] overflow-hidden bg-gradient-to-br ${template.thumbnailClassName}`}>
-                {/* Dot pattern */}
-                <div className="absolute inset-0 opacity-10"
-                  style={{ backgroundImage: `radial-gradient(circle at 2px 2px, ${template.primaryColor} 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-
-                {/* Inner glow frame */}
-                <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 40px 10px rgba(0,0,0,0.18)` }} />
-
-                {/* Certificate mock */}
-                <div className="absolute inset-0 flex items-center justify-center p-5">
-                  <div className="relative h-full w-full rounded-sm bg-white shadow-xl flex flex-col items-center p-3 border-2 transition-transform duration-500 group-hover:scale-[1.03]"
-                    style={{ borderColor: template.primaryColor }}>
-                    <div className="absolute inset-1 border opacity-20 rounded-[1px]" style={{ borderColor: template.secondaryColor }} />
-                    <div className="flex w-full justify-between items-start mb-3 px-1">
-                      <div className="size-5 rounded-full opacity-20" style={{ backgroundColor: template.primaryColor }} />
-                      <div className="h-1.5 w-16 rounded-full opacity-10" style={{ backgroundColor: template.primaryColor }} />
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((template) => {
+            const thumbnailClass = template.thumbnailClassName || "from-slate-700 via-slate-600 to-slate-500";
+            
+            return (
+              <Card key={template.id} className="group border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden flex flex-col hover:scale-[1.02] transition-all duration-500 bg-card">
+              {/* Visual Preview Area */}
+              <div 
+                className="aspect-[1.3/1] relative overflow-hidden p-6 text-white"
+                style={{
+                  background: `linear-gradient(135deg, ${template.primaryColor} 0%, ${template.secondaryColor} 100%)`
+                }}
+              >
+                  {/* Glass Card Preview */}
+                  <div className="relative h-full w-full rounded-2xl border border-white/20 bg-black/10 backdrop-blur-md p-4 flex flex-col justify-between shadow-2xl overflow-hidden">
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="h-full w-full bg-[radial-gradient(circle_at_center,_white_0,_transparent_70%)]" />
                     </div>
-                    <div className="h-2.5 w-3/4 rounded-full mb-1.5" style={{ backgroundColor: template.primaryColor }} />
-                    <div className="h-1.5 w-1/2 rounded-full mb-4 opacity-40" style={{ backgroundColor: template.primaryColor }} />
-                    <div className="h-4 w-2/3 rounded-sm mb-3 opacity-80" style={{ backgroundColor: '#f3f4f6' }} />
-                    <div className="space-y-1 w-full flex flex-col items-center">
-                      <div className="h-1 w-1/2 rounded-full opacity-10" style={{ backgroundColor: template.primaryColor }} />
-                      <div className="h-1 w-2/3 rounded-full opacity-10" style={{ backgroundColor: template.primaryColor }} />
-                    </div>
-                    <div className="mt-auto flex w-full justify-between px-3 pb-1">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="h-0.5 w-10 opacity-20" style={{ backgroundColor: template.primaryColor }} />
-                        <div className="h-1 w-8 opacity-10" style={{ backgroundColor: template.primaryColor }} />
+                    
+                    <div className="relative z-10 flex items-center justify-between">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">System Template</span>
+                      <div className="px-1.5 py-0.5 rounded-lg border border-white/20 text-white/80 text-[7px] font-black uppercase tracking-widest bg-white/5">
+                        {template.category}
                       </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="h-0.5 w-10 opacity-20" style={{ backgroundColor: template.primaryColor }} />
-                        <div className="h-1 w-8 opacity-10" style={{ backgroundColor: template.primaryColor }} />
+                    </div>
+
+                    <div className="relative z-10 text-center py-2">
+                      <h4 className="text-lg font-black tracking-tight leading-none mb-1 drop-shadow-md">{template.name}</h4>
+                      <p className="text-[8px] font-medium text-white/70 uppercase tracking-widest">Premium Layout</p>
+                    </div>
+
+                    <div className="relative z-10 flex items-center justify-between">
+                      <div className="flex -space-x-2">
+                        {[1, 2].map(i => (
+                          <div key={i} className="size-5 rounded-full border border-white/30 bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                            <Layout className="size-2 text-white/50" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="size-6 rounded-lg bg-white/20 flex items-center justify-center ring-1 ring-white/30">
+                        <Zap className="size-3 text-amber-400 fill-amber-400" />
                       </div>
                     </div>
                   </div>
+
+                  {/* Badges */}
+                  <div className="absolute top-4 right-4 flex gap-2 z-20">
+                    {template.isPremium && (
+                      <div className="bg-amber-500 text-white border-none font-black text-[8px] uppercase tracking-widest px-2 py-0.5 rounded-full shadow-lg shadow-amber-500/20">
+                        Pro
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Hover Actions Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[1px] flex items-center justify-center z-30">
+                    <Button 
+                      className="rounded-full px-8 py-6 bg-white text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 transition-all" 
+                      asChild
+                    >
+                      <Link href={`/dashboard/projects?new=true&template=${template.id}`}>
+                        Use Template
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Hover overlay + CTA */}
-                <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/25" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
-                  <Link
-                    href={`/dashboard/projects?new=true&template=${template.id}`}
-                    className="rounded-full bg-white px-5 py-2 text-sm font-bold text-slate-900 shadow-xl transition-all hover:scale-105 hover:bg-white/95"
-                  >
-                    Use Template
-                  </Link>
-                </div>
-              </div>
-
-              {/* Card body */}
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate font-bold text-slate-900 transition-colors group-hover:text-indigo-600">
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h3 className="text-base font-black tracking-tight group-hover:text-primary transition-colors truncate">
                       {template.name}
                     </h3>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">
-                      {template.description}
-                    </p>
+                    <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${categoryBadge[template.category] || 'bg-slate-100 text-slate-500'}`}>
+                      {template.category}
+                    </div>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                    categoryBadge[template.category] || 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {template.category}
-                  </span>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Layout className="size-3.5" />
-                    <span>{template.style || 'Modern'}</span>
+                  <p className="text-[11px] font-medium text-muted-foreground line-clamp-2 italic mb-6">
+                    {template.description}
+                  </p>
+                  
+                  <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <Layout className="size-3.5" />
+                      <span>{template.style || 'Modern'}</span>
+                    </div>
+                    <Link
+                      href={`/dashboard/projects?new=true&template=${template.id}`}
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      Select
+                      <ArrowRight className="size-3.5" />
+                    </Link>
                   </div>
-                  <Link
-                    href={`/dashboard/projects?new=true&template=${template.id}`}
-                    className="group/btn flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 transition-all duration-200 hover:bg-indigo-600 hover:text-white"
-                  >
-                    Select
-                    <ArrowRight className="size-3 transition-transform group-hover/btn:translate-x-0.5" />
-                  </Link>
                 </div>
-              </div>
-            </div>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-muted/20 px-6 py-20 text-center">

@@ -59,6 +59,9 @@ interface Template {
   is_featured: boolean;
   uses: number;
   created_at: string;
+  accent_color?: string;
+  secondary_color?: string;
+  featured_text?: string;
 }
 
 export default function TemplateManagementPage() {
@@ -69,6 +72,26 @@ export default function TemplateManagementPage() {
 
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    category: "Corporate",
+    description: "",
+    accent_color: "#3b82f6",
+    secondary_color: "#10b981",
+    featured_text: "Certificate of Achievement",
+  });
+
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    category: "Corporate",
+    description: "",
+    accent_color: "#3b82f6",
+    secondary_color: "#10b981",
+    featured_text: "Certificate of Achievement",
+  });
 
   const fetchTemplates = async () => {
     setIsLoading(true);
@@ -121,6 +144,79 @@ export default function TemplateManagementPage() {
     }
   };
 
+  const handleCreateTemplate = async () => {
+    if (!createForm.name) {
+      toast.error("Please enter a template name");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/admin/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createForm)
+      });
+      if (res.ok) {
+        toast.success("Template created successfully");
+        setIsCreateOpen(false);
+        setCreateForm({
+          name: "",
+          category: "Corporate",
+          description: "",
+          accent_color: "#3b82f6",
+          secondary_color: "#10b981",
+          featured_text: "Certificate of Achievement",
+        });
+        fetchTemplates();
+      } else {
+        toast.error("Failed to create template");
+      }
+    } catch (err) {
+      toast.error("Error creating template");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditTemplate = async () => {
+    if (!selectedTemplate) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/admin/templates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: selectedTemplate.id, 
+          ...editForm 
+        })
+      });
+      if (res.ok) {
+        toast.success("Template updated successfully");
+        setIsEditOpen(false);
+        fetchTemplates();
+      } else {
+        toast.error("Failed to update template");
+      }
+    } catch (err) {
+      toast.error("Error updating template");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openEditDialog = (template: Template) => {
+    setSelectedTemplate(template);
+    setEditForm({
+      name: template.name,
+      category: template.category || "Corporate",
+      description: template.description || "",
+      accent_color: template.accent_color || "#3b82f6",
+      secondary_color: template.secondary_color || "#10b981",
+      featured_text: template.featured_text || "Certificate of Achievement",
+    });
+    setIsEditOpen(true);
+  };
+
   const filtered = templates.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          t.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -136,11 +232,12 @@ export default function TemplateManagementPage() {
         title="Template Management" 
         description="Design and manage the system-wide certificate template library."
       >
-        <Button className="rounded-full shadow-lg gap-2" asChild>
-          <Link href="/dashboard/projects?new=true">
-            <Plus className="size-4" />
-            Create Template
-          </Link>
+        <Button 
+          className="rounded-full shadow-lg gap-2" 
+          onClick={() => setIsCreateOpen(true)}
+        >
+          <Plus className="size-4" />
+          Create Template
         </Button>
       </PageHeader>
 
@@ -231,7 +328,12 @@ export default function TemplateManagementPage() {
             return (
               <Card key={template.id} className="group border-none shadow-xl ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden flex flex-col hover:scale-[1.02] transition-all duration-500 bg-card">
                 {/* Visual Preview Area */}
-                <div className={`aspect-[1.3/1] relative overflow-hidden bg-gradient-to-br ${thumbnailClass} p-6 text-white`}>
+                <div 
+                  className="aspect-[1.3/1] relative overflow-hidden p-6 text-white"
+                  style={{
+                    background: `linear-gradient(135deg, ${template.accent_color || '#3b82f6'} 0%, ${template.secondary_color || '#10b981'} 100%)`
+                  }}
+                >
                   {/* Glass Card Preview */}
                   <div className="relative h-full w-full rounded-2xl border border-white/20 bg-black/10 backdrop-blur-md p-4 flex flex-col justify-between shadow-2xl overflow-hidden">
                     <div className="absolute inset-0 opacity-10">
@@ -273,18 +375,36 @@ export default function TemplateManagementPage() {
                     )}
                   </div>
                   
-                  {/* Hover Actions Overlay */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] flex items-center justify-center gap-3 z-30">
-                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform" asChild title="Preview Template">
+                  {/* Hover Actions Overlay — 3 Green Boxes */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[1px] flex items-center justify-center gap-4 z-30">
+                    <Button 
+                      size="icon" 
+                      variant="secondary" 
+                      className="rounded-full size-11 bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xl hover:scale-110 transition-all" 
+                      asChild 
+                      title="Preview Template"
+                    >
                       <Link href={`/dashboard/projects?new=true&template=${template.id}`}>
-                        <Eye className="size-4" />
+                        <Eye className="size-5" />
                       </Link>
                     </Button>
-                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform" title="Edit Properties">
-                      <Edit className="size-4" />
+                    <Button 
+                      size="icon" 
+                      variant="secondary" 
+                      className="rounded-full size-11 bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xl hover:scale-110 transition-all" 
+                      onClick={() => openEditDialog(template)}
+                      title="Edit Properties"
+                    >
+                      <Edit className="size-5" />
                     </Button>
-                    <Button size="icon" variant="secondary" className="rounded-2xl shadow-xl hover:scale-110 transition-transform text-rose-600" onClick={() => { setSelectedTemplate(template); setIsDeleteOpen(true); }} title="Delete Template">
-                      <Trash2 className="size-4" />
+                    <Button 
+                      size="icon" 
+                      variant="secondary" 
+                      className="rounded-full size-11 bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xl hover:scale-110 transition-all" 
+                      onClick={() => { setSelectedTemplate(template); setIsDeleteOpen(true); }} 
+                      title="Delete Template"
+                    >
+                      <Trash2 className="size-5" />
                     </Button>
                   </div>
                 </div>
@@ -350,6 +470,196 @@ export default function TemplateManagementPage() {
           </Button>
         </Card>
       )}
+
+      {/* Create Modal */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="text-center">
+            <div className="size-16 rounded-[2rem] bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600 mb-4">
+              <Plus className="size-8" />
+            </div>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Create New Template</DialogTitle>
+            <DialogDescription>
+              Define a new certificate template for all users.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 my-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Template Name</label>
+              <Input 
+                placeholder="e.g., Executive Excellence"
+                value={createForm.name} 
+                onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
+                className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Category</label>
+                <Input 
+                  value={createForm.category} 
+                  onChange={(e) => setCreateForm({...createForm, category: e.target.value})}
+                  className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Featured Text</label>
+                <Input 
+                  value={createForm.featured_text} 
+                  onChange={(e) => setCreateForm({...createForm, featured_text: e.target.value})}
+                  className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Primary Color</label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="color"
+                    value={createForm.accent_color} 
+                    onChange={(e) => setCreateForm({...createForm, accent_color: e.target.value})}
+                    className="w-12 h-10 p-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 cursor-pointer"
+                  />
+                  <Input 
+                    value={createForm.accent_color} 
+                    onChange={(e) => setCreateForm({...createForm, accent_color: e.target.value})}
+                    className="flex-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 uppercase"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Secondary Color</label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="color"
+                    value={createForm.secondary_color} 
+                    onChange={(e) => setCreateForm({...createForm, secondary_color: e.target.value})}
+                    className="w-12 h-10 p-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 cursor-pointer"
+                  />
+                  <Input 
+                    value={createForm.secondary_color} 
+                    onChange={(e) => setCreateForm({...createForm, secondary_color: e.target.value})}
+                    className="flex-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Description</label>
+              <textarea 
+                placeholder="Briefly describe the template's purpose..."
+                value={createForm.description} 
+                onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
+                className="w-full min-h-[80px] rounded-2xl bg-muted/20 border-none ring-1 ring-border/50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="rounded-full flex-1 font-bold">Cancel</Button>
+            <Button onClick={handleCreateTemplate} disabled={isSaving} className="rounded-full flex-1 font-bold shadow-lg shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700">
+              {isSaving ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+              Create Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="text-center">
+            <div className="size-16 rounded-[2rem] bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto text-emerald-600 mb-4">
+              <Edit className="size-8" />
+            </div>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Edit Template Properties</DialogTitle>
+            <DialogDescription>
+              Update metadata for <span className="font-bold text-foreground">"{selectedTemplate?.name}"</span>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 my-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Template Name</label>
+              <Input 
+                value={editForm.name} 
+                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Category</label>
+                <Input 
+                  value={editForm.category} 
+                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                  className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Featured Text</label>
+                <Input 
+                  value={editForm.featured_text} 
+                  onChange={(e) => setEditForm({...editForm, featured_text: e.target.value})}
+                  className="rounded-2xl bg-muted/20 border-none ring-1 ring-border/50"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Primary Color</label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="color"
+                    value={editForm.accent_color} 
+                    onChange={(e) => setEditForm({...editForm, accent_color: e.target.value})}
+                    className="w-12 h-10 p-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 cursor-pointer"
+                  />
+                  <Input 
+                    value={editForm.accent_color} 
+                    onChange={(e) => setEditForm({...editForm, accent_color: e.target.value})}
+                    className="flex-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 uppercase"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Secondary Color</label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="color"
+                    value={editForm.secondary_color} 
+                    onChange={(e) => setEditForm({...editForm, secondary_color: e.target.value})}
+                    className="w-12 h-10 p-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 cursor-pointer"
+                  />
+                  <Input 
+                    value={editForm.secondary_color} 
+                    onChange={(e) => setEditForm({...editForm, secondary_color: e.target.value})}
+                    className="flex-1 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Description</label>
+              <textarea 
+                value={editForm.description} 
+                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                className="w-full min-h-[80px] rounded-2xl bg-muted/20 border-none ring-1 ring-border/50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} className="rounded-full flex-1 font-bold">Cancel</Button>
+            <Button onClick={handleEditTemplate} disabled={isSaving} className="rounded-full flex-1 font-bold shadow-lg shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700">
+              {isSaving ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Modal */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
